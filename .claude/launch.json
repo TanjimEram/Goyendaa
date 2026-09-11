@@ -4,8 +4,23 @@
     {
       "name": "Next.js Dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "Cloudflare Preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "opennextjs-cloudflare",
+        "preview",
+        "--",
+        "--port",
+        "8787"
+      ],
+      "port": 8787
     }
   ]
 }

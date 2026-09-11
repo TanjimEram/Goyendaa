@@ -1,0 +1,35 @@
+// Cloudflare Workers config for the OpenNext build.
+// Docs: https://opennext.js.org/cloudflare  ·  https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "goyenda",
+  "main": ".open-next/worker.js",
+
+  // nodejs_compat is required by OpenNext. The date pins workerd behaviour;
+  // bump it deliberately, not as a side effect of other changes.
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  // Prerendered HTML, /_next/static and /public are served as static assets —
+  // free and uncapped on the Workers free plan. Only non-static requests hit
+  // the Worker itself.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // Deliberately NOT configured yet (each is a later, separate decision):
+  //  - r2_buckets / NEXT_INC_CACHE_R2_BUCKET: ISR cache. Nothing uses ISR;
+  //    every route is fully static. Add when a route needs revalidation.
+  //  - images / IMAGES: Cloudflare Images transforms for next/image. Without
+  //    it OpenNext serves the original file, which is fine until real case
+  //    thumbnails exist. Free tier: 5,000 unique transforms/month.
+  //  - services / WORKER_SELF_REFERENCE: only needed with the ISR cache.
+  //  - triggers.crons: for the delayed solution emails (replaces Vercel Cron).
+  //  - vars / secrets: Supabase + Resend + payment keys go in as Worker
+  //    secrets via the dashboard or `wrangler secret put`, never in this file.
+
+  "observability": {
+    "enabled": true
+  }
+}

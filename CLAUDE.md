@@ -33,11 +33,24 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | Fonts | `next/font/google` — Bodoni Moda, Inter, IBM Plex Mono | in place |
 | DB + storage | **Supabase** (free tier) | not wired up |
 | Transactional email | **Resend** (free tier) | not wired up |
-| Scheduled jobs | **Vercel Cron** — polls a table of pending solution sends | not built |
-| Hosting | **Vercel** (free tier) | not deployed |
+| Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`) — polls a table of pending solution sends | not built |
+| Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | configured, not yet deployed |
 | Payments | UddoktaPay **or** BangoPay (TBD) | not built |
 
 > ⚠️ This is **Next.js 16** — APIs differ from older training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing code. Notably: `LayoutProps<'/'>` and `PageProps<'/route'>` are **global** type helpers requiring no import.
+
+### Hosting: Cloudflare Workers, and why
+
+The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibits commercial use**, and Goyenda sells things. Cloudflare's Workers free plan permits commercial use (100k requests/day, static assets free and uncapped), which fits the ~5000 BDT/year budget.
+
+- **Adapter: `@opennextjs/cloudflare`** (OpenNext). This is the actively maintained, Cloudflare-endorsed path. `@cloudflare/next-on-pages` is deprecated on npm — do not use it.
+- **It targets Workers with Static Assets, not Cloudflare Pages.** OpenNext has no Pages target. Prerendered HTML, `/_next/static` and `/public` are served as static assets; only non-static requests run in the Worker.
+- **Edge runtime is unsupported** by the adapter. Never add `export const runtime = "edge"` to a route. Node runtime (the default) is what runs, under `nodejs_compat`.
+- **Config files:** `wrangler.jsonc` (Worker name, compat flags, assets binding, later: crons/bindings), `open-next.config.ts` (adapter options — currently no ISR cache, deliberately), `next.config.ts` calls `initOpenNextCloudflareForDev()` so `next dev` can reach bindings.
+- **Scripts:** `npm run dev` (unchanged, Next dev server) · `npm run build` (plain `next build`, what Cloudflare's CI runs first) · `npm run cf:build` (OpenNext bundle → `.open-next/`) · `npm run preview` (build + run in local `workerd`, port 8787 — **the real test**) · `npm run deploy` (build + `wrangler deploy`, needs a Cloudflare login) · `npm run cf-typegen` (types for bindings).
+- **Secrets** (Supabase, Resend, payment keys) go in as Worker secrets via the dashboard or `wrangler secret put`, and locally in `.dev.vars` (gitignored). Never in `wrangler.jsonc`, never in `NEXT_PUBLIC_*` unless truly public.
+- **Not configured yet, by design:** R2 incremental cache (nothing uses ISR), `IMAGES` binding (no real thumbnails yet; without it OpenNext serves the original file), cron triggers (no delivery job yet). Each is a one-line addition to `wrangler.jsonc` when needed — see the comments there.
+- **Verified 2026-09-11:** all routes render identically under `workerd` via `npm run preview` — homepage, catalog filter/sort, SSG detail pages, 404s.
 
 ---
 
@@ -48,7 +61,7 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
 4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜ *(detail page already links to `/checkout/[slug]`, which 404s until this is built)*
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
-6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (Vercel Cron over a `pending_sends` table) plus Resend. ⬜
+6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
 7. **Admin dashboard** — *later phase, explicitly out of scope for now.* Case CRUD with file upload, publish/unpublish toggle, order list, minimal theme settings (hero video URL, accent colour). Deliberately **not** a full CMS. ⬜
 
 ### Difficulty ranks
@@ -100,7 +113,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: homepage, catalog and case detail complete. Checkout placeholder + success page are next.**
+**Phase: homepage, catalog and case detail complete; Cloudflare Workers deployment configured (not yet deployed). Checkout placeholder + success page are next.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -124,6 +137,8 @@ src/lib/cases.ts                ALL_CASES (8), FEATURED_CASES (derived),
                                 getCaseContents, getPreviewDocs,
                                 getRelatedCases, ৳/time formatters
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
+wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)
+open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 ```
 
 Catalog behaviour worth knowing:

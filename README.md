@@ -8,7 +8,7 @@ Every case is fictional. See the editorial rule in [`CLAUDE.md`](./CLAUDE.md).
 
 ## Stack
 
-Next.js 16 (App Router, TypeScript) · Tailwind CSS v4 · Supabase · Resend · Vercel
+Next.js 16 (App Router, TypeScript) · Tailwind CSS v4 · Supabase · Resend · Cloudflare Workers (via OpenNext)
 
 ## Getting started
 
@@ -21,6 +21,14 @@ npm run dev
 ```
 
 Then open <http://localhost:3000>.
+
+To run the production bundle in Cloudflare's local `workerd` runtime (the closest thing to the deployed site):
+
+```bash
+npm run preview
+```
+
+Then open <http://localhost:8787>.
 
 ## Project docs
 
