@@ -14,9 +14,8 @@
       "name": "Cloudflare Preview",
       "runtimeExecutable": "npx",
       "runtimeArgs": [
-        "opennextjs-cloudflare",
-        "preview",
-        "--",
+        "wrangler",
+        "dev",
         "--port",
         "8787"
       ],

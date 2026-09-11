@@ -2,7 +2,11 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // OpenNext consumes Next's standalone output. Normally it sets this itself
+  // by driving `next build`; we run `next build` first (so Cloudflare's
+  // default `npm run build` works) and hand OpenNext the result with
+  // --skipNextBuild, which means this must be explicit.
+  output: "standalone",
 };
 
 export default nextConfig;
