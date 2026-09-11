@@ -12,10 +12,11 @@
     },
     {
       "name": "Cloudflare Preview",
-      "runtimeExecutable": "npx",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
-        "wrangler",
-        "dev",
+        "run",
+        "preview",
+        "--",
         "--port",
         "8787"
       ],
