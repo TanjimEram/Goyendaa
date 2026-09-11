@@ -45,8 +45,8 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 
 1. **Homepage** — hero (video-capable), featured cases, brand story. ✅ **built**
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
-3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ⬜ *(`/cases/[slug]` exists only as a "PENDING" placeholder so catalog cards have somewhere to go)*
-4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜
+3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
+4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜ *(detail page already links to `/checkout/[slug]`, which 404s until this is built)*
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (Vercel Cron over a `pending_sends` table) plus Resend. ⬜
 7. **Admin dashboard** — *later phase, explicitly out of scope for now.* Case CRUD with file upload, publish/unpublish toggle, order list, minimal theme settings (hero video URL, accent colour). Deliberately **not** a full CMS. ⬜
@@ -100,7 +100,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: homepage + catalog complete. Case detail is next.**
+**Phase: homepage, catalog and case detail complete. Checkout placeholder + success page are next.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -111,13 +111,18 @@ src/app/layout.tsx              root layout — fonts, metadata, film-grain over
 src/app/globals.css             @theme design tokens + noir motif utilities
 src/app/page.tsx                homepage composition
 src/app/cases/page.tsx          catalog — static page, client grid in <Suspense>
-src/app/cases/[slug]/page.tsx   PLACEHOLDER detail page (generateStaticParams,
-                                notFound() for unknown slugs)
+src/app/cases/[slug]/page.tsx   case detail — SSG via generateStaticParams,
+                                notFound() for unknown slugs
 src/components/                 SiteHeader, Hero, CaseCard (+DifficultyBadge),
                                 FeaturedCases, CatalogGrid ("use client"),
-                                HowItWorks, BrandStory, SiteFooter
+                                HowItWorks, BrandStory, SiteFooter,
+                                PurchasePanel (+PurchaseBar, checkoutHref),
+                                RankGuide, RedactedDocument
 src/lib/cases.ts                ALL_CASES (8), FEATURED_CASES (derived),
-                                RANKS, RANK_ORDER, ৳/time formatters
+                                RANKS (+tagline/description/ranges),
+                                RANK_CONTENTS templates, getCaseBySlug,
+                                getCaseContents, getPreviewDocs,
+                                getRelatedCases, ৳/time formatters
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
 ```
 
@@ -127,10 +132,20 @@ Catalog behaviour worth knowing:
 - **`CaseCard` is the single card component** for both the homepage teaser and the catalog. The whole card is one `<Link>` to `/cases/[slug]`; the "Take the case" button is a `<span>` inside it, not a nested anchor.
 - **Thumbnails**: `CaseFile.thumbnail` is optional. When set, the card renders `next/image` (`fill`, 16:9). When absent it renders the generated redacted-document preview headed with `CaseFile.exhibit`. No real thumbnails exist yet.
 
+Case detail behaviour worth knowing:
+
+- **Two buy surfaces, one href.** `PurchasePanel` is the sticky aside from `lg` up; `PurchaseBar` is a bottom-pinned bar below `lg` (the page adds `pb-24 lg:pb-0` to `<main>` so the footer clears it). Both call `checkoutHref()` → `/checkout/[slug]`. Change the checkout URL in one place.
+- **"What's in the file" is templated by rank** (`RANK_CONTENTS`) until a case sets its own `contents[]`. Any item whose label contains "solution" is rendered as the full-width "Sealed" row.
+- **Previews are div mock-ups** (`RedactedDocument`, three layouts picked from the heading by `variantFor`). Headings come from `getPreviewDocs()`: the case's `exhibit` + two rank-based defaults, unless the case sets `previewDocs[]`. When real page scans exist, swap the body for an `<Image>` and keep the frame + PREVIEW stamp.
+- **`CaseFile.hook`** is the 2–3 sentence teaser on the detail page; `premise` stays the one-liner on cards. Both must tease without naming the mechanism.
+- **Difficulty explanation** lives in `RankGuide` (`#difficulty`), reached from the badge in the header; the badge's `title` carries `RANKS[rank].tagline` as a tooltip.
+
 Known placeholders, to be replaced:
 
 - **Case data is hard-coded** in `src/lib/cases.ts` — 8 invented cases. Shape is deliberately Supabase-ready — when the `cases` table lands, only the loader changes; `CaseCard`/`CatalogGrid` should not need edits.
-- **No real thumbnails.** Every card uses the generated redacted preview. Drop image paths into `CaseFile.thumbnail` to switch a card over.
+- **No real thumbnails or page scans.** Cards use the generated redacted preview; the detail page's three "exhibits" are div mock-ups. Drop image paths into `CaseFile.thumbnail` to switch a card over.
+- **Contents lists are rank templates, not real manifests.** Counts (3 / 5 / 7 witness statements etc.) are invented and don't reconcile exactly with `pages`. Real cases should set `contents[]`.
+- **`/checkout/[slug]` does not exist** — every Buy button 404s. Next build step.
 - **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
 - **Footer "Contact / FAQ / Legal" links are `#`.** Everything else in header, hero and footer is a real route or on-page anchor.
