@@ -12,24 +12,21 @@ import { RedactedDocument } from "@/components/RedactedDocument";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import {
-  ALL_CASES,
   RANKS,
   formatTaka,
-  getCaseBySlug,
   getCaseContents,
   getPreviewDocs,
   getRelatedCases,
 } from "@/lib/cases";
+import { getPublishedCase, getPublishedCases } from "@/lib/cases-data";
 
-export function generateStaticParams() {
-  return ALL_CASES.map(({ slug }) => ({ slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/cases/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const caseFile = getCaseBySlug(slug);
+  const caseFile = await getPublishedCase(slug);
   if (!caseFile) return { title: "Goyenda" };
   return {
     title: `${caseFile.title} — Goyenda`,
@@ -51,13 +48,16 @@ export default async function CaseDetailPage({
   params,
 }: PageProps<"/cases/[slug]">) {
   const { slug } = await params;
-  const caseFile = getCaseBySlug(slug);
+  const caseFile = await getPublishedCase(slug);
   if (!caseFile) notFound();
 
   const rank = RANKS[caseFile.rank];
   const contents = getCaseContents(caseFile);
-  const previews = getPreviewDocs(caseFile);
-  const related = getRelatedCases(caseFile);
+  // Real gallery images when the admin has uploaded some; generated
+  // redacted documents otherwise. Three slots either way.
+  const gallery = (caseFile.gallery ?? []).slice(0, 3);
+  const previews = gallery.length ? [] : getPreviewDocs(caseFile);
+  const related = getRelatedCases(caseFile, await getPublishedCases());
 
   return (
     <>
@@ -222,6 +222,15 @@ export default async function CaseDetailPage({
             </div>
 
             <div className="evidence-board mt-10 grid gap-8 py-4 sm:grid-cols-2 lg:grid-cols-3">
+              {gallery.map((src, i) => (
+                <RedactedDocument
+                  key={src}
+                  heading={`Page ${i + 1}`}
+                  code={caseFile.code}
+                  index={i}
+                  imageSrc={src}
+                />
+              ))}
               {previews.map((heading, i) => (
                 <RedactedDocument
                   key={heading}

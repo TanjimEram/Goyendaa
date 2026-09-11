@@ -31,7 +31,7 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | Framework | **Next.js 16.3.4** (App Router, TypeScript, `src/` dir, `@/*` alias) | in place |
 | Styling | **Tailwind CSS v4** — tokens in `@theme` in `src/app/globals.css` | in place |
 | Fonts | `next/font/google` — Bodoni Moda, Inter, IBM Plex Mono | in place |
-| DB + storage | **Supabase** (free tier) | not wired up |
+| DB + storage | **Supabase** (free tier) — Postgres `cases` table, Auth (one admin user), Storage (`case-media` public, `case-files` private) | wired up |
 | Transactional email | **Resend** (free tier) | not wired up |
 | Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`) — polls a table of pending solution sends | not built |
 | Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | configured, not yet deployed |
@@ -64,7 +64,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜ *(detail page already links to `/checkout/[slug]`, which 404s until this is built)*
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
-7. **Admin dashboard** — *later phase, explicitly out of scope for now.* Case CRUD with file upload, publish/unpublish toggle, order list, minimal theme settings (hero video URL, accent colour). Deliberately **not** a full CMS. ⬜
+7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle. ✅ **built** (`/admin`). Still to come: drag-reorder (next pass), order list, minimal theme settings. Deliberately **not** a full CMS.
 
 ### Difficulty ranks
 
@@ -115,7 +115,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: homepage, catalog and case detail complete; Cloudflare Workers deployment configured (not yet deployed). Checkout placeholder + success page are next.**
+**Phase: public pages + admin dashboard complete, reading/writing Supabase. Next: drag-reorder in admin, then checkout placeholder + success page.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -133,15 +133,42 @@ src/components/                 SiteHeader, Hero, CaseCard (+DifficultyBadge),
                                 HowItWorks, BrandStory, SiteFooter,
                                 PurchasePanel (+PurchaseBar, checkoutHref),
                                 RankGuide, RedactedDocument
-src/lib/cases.ts                ALL_CASES (8), FEATURED_CASES (derived),
-                                RANKS (+tagline/description/ranges),
-                                RANK_CONTENTS templates, getCaseBySlug,
-                                getCaseContents, getPreviewDocs,
-                                getRelatedCases, ৳/time formatters
+src/lib/cases.ts                types, RANKS, RANK_CONTENTS, pure helpers —
+                                NO data, safe for client components
+src/lib/cases-data.ts           server-only Supabase reads: CaseRow type,
+                                rowToCaseFile, getPublishedCases,
+                                getPublishedCase, getAllCasesAdmin,
+                                getCaseByIdAdmin
+src/lib/supabase/{env,client,server}.ts
+                                env reader, browser client, server clients
+                                (cookie-aware + anonymous public)
+src/lib/storage.ts              bucket names, URL↔path helpers
+src/lib/slug.ts                 slugify + SLUG_PATTERN
+src/proxy.ts                    guards /admin/*, refreshes session cookie
+src/app/admin/login/            server page + actions (login/logout)
+src/app/admin/(dashboard)/      guarded layout, list, cases/new,
+                                cases/[id]/edit, cases/actions.ts
+src/components/admin/           LoginForm, CaseForm, FileUpload,
+                                DeleteCaseButton
+supabase/migrations/0001_cases.sql   table, RLS, buckets, storage policies
+supabase/seed.sql               the eight placeholder cases
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
 wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)
 open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 ```
+
+### Data & admin — how it fits together
+
+- **Rendering is dynamic** (`export const dynamic = "force-dynamic"`) on `/`, `/cases`, `/cases/[slug]` and all admin pages: they read Supabase per request. No ISR is possible until an R2 incremental cache is configured on Cloudflare. Static assets (JS/CSS/fonts/SVG) are still served free from the edge.
+- **Public reads use the anonymous client** (`createPublicClient`, no cookies). RLS only exposes `published = true` rows to `anon`. In production a failed read logs and renders empty; in development it throws.
+- **Admin writes use the cookie-aware client** as the signed-in user. RLS grants `authenticated` full access. There is no service-role key anywhere and none is needed.
+- **Auth guard is two layers:** `src/proxy.ts` does an optimistic `getClaims()` (JWT verified locally, no DB call) and redirects; `admin/(dashboard)/layout.tsx` repeats it server-side. `/admin/login` sits outside the route group so it isn't guarded.
+- **Sign-ups must be disabled in Supabase** (Authentication → Providers → Email → "Allow new users to sign up" OFF). RLS treats any `authenticated` user as the admin.
+- **File uploads go browser → Storage directly** (`FileUpload` uses the browser client + admin session). Nothing streams through the Worker, so there's no request-size ceiling to hit. Public bucket values are stored as public URLs; private bucket values as object paths.
+- **Gallery is a `text[]` column** (`gallery_urls`), not a `case_images` table — one row, one form, array order = display order. Revisit only if images need captions or per-image metadata.
+- **`case_number` (identity) drives "CASE 007"; `position` drives ordering.** Reordering never renumbers a file.
+- **Deleting a case removes its storage objects** (best-effort). Removing a file inside the form only detaches it; the object stays until the case is deleted — orphans are possible after abandoned edits.
+- **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
 
 Catalog behaviour worth knowing:
 
@@ -159,8 +186,11 @@ Case detail behaviour worth knowing:
 
 Known placeholders, to be replaced:
 
-- **Case data is hard-coded** in `src/lib/cases.ts` — 8 invented cases. Shape is deliberately Supabase-ready — when the `cases` table lands, only the loader changes; `CaseCard`/`CatalogGrid` should not need edits.
-- **No real thumbnails or page scans.** Cards use the generated redacted preview; the detail page's three "exhibits" are div mock-ups. Drop image paths into `CaseFile.thumbnail` to switch a card over.
+- **The eight placeholder cases live in `supabase/seed.sql`**, not in code. Run it once for content; edit/delete them from `/admin`.
+- **No real thumbnails or page scans yet.** Cards use the generated redacted preview until a thumbnail is uploaded; the detail page renders uploaded gallery images (first three) and falls back to div mock-ups.
+- **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
+- **Contents list is still the rank template** — no per-case manifest UI in the admin yet (`CaseFile.contents` exists in the type for when there is).
+- **No drag-reorder in admin** — `position` is set on create (appended) and only editable via SQL until the next pass.
 - **Contents lists are rank templates, not real manifests.** Counts (3 / 5 / 7 witness statements etc.) are invented and don't reconcile exactly with `pages`. Real cases should set `contents[]`.
 - **`/checkout/[slug]` does not exist** — every Buy button 404s. Next build step.
 - **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").

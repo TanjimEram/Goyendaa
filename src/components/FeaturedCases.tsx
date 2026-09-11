@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CaseCard } from "@/components/CaseCard";
-import { FEATURED_CASES } from "@/lib/cases";
+import type { CaseFile } from "@/lib/cases";
 
 const COUNT_WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
 
-export function FeaturedCases() {
+export function FeaturedCases({ cases }: { cases: CaseFile[] }) {
   return (
     <section
       id="casebook"
@@ -17,8 +17,9 @@ export function FeaturedCases() {
             The Casebook
           </p>
           <h2 className="mt-4 font-display text-4xl leading-tight font-semibold text-cream sm:text-5xl">
-            {COUNT_WORDS[FEATURED_CASES.length] ?? FEATURED_CASES.length} files
-            to start with.
+            {cases.length
+              ? `${COUNT_WORDS[cases.length] ?? cases.length} files to start with.`
+              : "The archive is being assembled."}
           </h2>
         </div>
 
@@ -31,7 +32,7 @@ export function FeaturedCases() {
       </div>
 
       <ul className="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURED_CASES.map((caseFile) => (
+        {cases.map((caseFile) => (
           <CaseCard key={caseFile.slug} caseFile={caseFile} />
         ))}
       </ul>

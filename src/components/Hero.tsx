@@ -7,26 +7,34 @@
  * and never the sole carrier of information.
  */
 import Link from "next/link";
-import { ALL_CASES, formatTaka } from "@/lib/cases";
+import { formatTaka, type CaseFile } from "@/lib/cases";
 
 const HERO_VIDEO_SRC: string = "";
 const HERO_POSTER = "/hero-poster.svg";
 
-// Derived from the catalogue so the numbers can't go stale.
-const pageCounts = ALL_CASES.map((c) => c.pages);
-const STATS = [
-  { value: String(ALL_CASES.length), label: "Cases open" },
-  {
-    value: `${formatTaka(Math.min(...ALL_CASES.map((c) => c.priceBdt)))}+`,
-    label: "Per file",
-  },
-  {
-    value: `${Math.min(...pageCounts)}–${Math.max(...pageCounts)}`,
-    label: "Printed pages",
-  },
-];
+/** Stat strip, derived from the live catalogue so it can't go stale. */
+function statsFor(cases: CaseFile[]) {
+  if (!cases.length) {
+    return [
+      { value: "—", label: "Cases open" },
+      { value: "—", label: "Per file" },
+      { value: "—", label: "Printed pages" },
+    ];
+  }
+  const pages = cases.map((c) => c.pages);
+  const prices = cases.map((c) => c.priceBdt);
+  return [
+    { value: String(cases.length), label: "Cases open" },
+    { value: `${formatTaka(Math.min(...prices))}+`, label: "Per file" },
+    {
+      value: `${Math.min(...pages)}–${Math.max(...pages)}`,
+      label: "Printed pages",
+    },
+  ];
+}
 
-export function Hero() {
+export function Hero({ cases }: { cases: CaseFile[] }) {
+  const STATS = statsFor(cases);
   return (
     <section
       id="top"

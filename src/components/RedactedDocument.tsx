@@ -11,6 +11,8 @@
  *   transcript  — Q / A lines
  */
 
+import Image from "next/image";
+
 type Variant = "form" | "statement" | "transcript";
 
 /** Tailwind width classes, chosen per variant so line lengths look typed
@@ -132,6 +134,7 @@ export function RedactedDocument({
   code,
   index,
   variant = variantFor(heading),
+  imageSrc,
 }: {
   heading: string;
   /** Case code, printed in the document's corner. */
@@ -139,6 +142,9 @@ export function RedactedDocument({
   /** 0-based position in the strip; sets the exhibit letter and tilt. */
   index: number;
   variant?: Variant;
+  /** A real (already redacted) page image. When set, replaces the generated
+   *  body; the frame and PREVIEW stamp stay. */
+  imageSrc?: string;
 }) {
   const Body = BODIES[variant];
   const letter = String.fromCharCode(65 + index); // A, B, C …
@@ -160,9 +166,21 @@ export function RedactedDocument({
         </span>
       </figcaption>
 
-      <div aria-hidden>
-        <Body />
-      </div>
+      {imageSrc ? (
+        <div className="relative mt-4 aspect-[3/4] w-full overflow-hidden bg-noir">
+          <Image
+            src={imageSrc}
+            alt={`${heading} — redacted preview page`}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        </div>
+      ) : (
+        <div aria-hidden>
+          <Body />
+        </div>
+      )}
 
       {/* Preview stamp — tells the buyer this is a sample, not the file. */}
       <span

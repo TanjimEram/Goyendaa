@@ -3,7 +3,9 @@ import { Suspense } from "react";
 import { CatalogGrid } from "@/components/CatalogGrid";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ALL_CASES } from "@/lib/cases";
+import { getPublishedCases } from "@/lib/cases-data";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "The Casebook — Goyenda",
@@ -11,7 +13,8 @@ export const metadata: Metadata = {
     "Every open Goyenda case file. Filter by difficulty rank, pick a case, print the evidence and work it.",
 };
 
-export default function CasesPage() {
+export default async function CasesPage() {
+  const cases = await getPublishedCases();
   return (
     <>
       <SiteHeader />
@@ -39,7 +42,7 @@ export default function CasesPage() {
           {/* useSearchParams inside CatalogGrid needs a Suspense boundary so
               the page can still be prerendered as static HTML. */}
           <Suspense fallback={<CatalogFallback />}>
-            <CatalogGrid cases={ALL_CASES} />
+            <CatalogGrid cases={cases} />
           </Suspense>
 
           <p className="mt-14 border-l-2 border-brass-dim pl-4 font-mono text-[11px] leading-[1.9] tracking-[0.06em] text-ash">

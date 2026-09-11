@@ -59,7 +59,7 @@ function RedactedPreview({ exhibit }: { exhibit: string }) {
 /** Real thumbnail when one exists, generated preview otherwise. */
 function CaseThumbnail({ caseFile }: { caseFile: CaseFile }) {
   if (!caseFile.thumbnail) {
-    return <RedactedPreview exhibit={caseFile.exhibit} />;
+    return <RedactedPreview exhibit={caseFile.exhibit ?? "Case brief"} />;
   }
 
   return (

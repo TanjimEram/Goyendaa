@@ -1,9 +1,10 @@
 /**
- * Placeholder case data for the homepage teaser row and the /cases catalog.
+ * Case types, difficulty-rank config and pure helpers.
  *
- * This is hard-coded on purpose — Supabase is not wired up yet. When the
- * `cases` table lands, this module keeps its shape and only the loader
- * changes, so `CaseCard` and the catalog page won't need edits.
+ * Nothing in here touches the network, so it is safe to import from client
+ * components. Case *data* comes from Supabase via `src/lib/cases-data.ts`
+ * (server-only); the seed for the eight placeholder cases lives in
+ * `supabase/seed.sql`.
  *
  * EDITORIAL RULE: every case is invented. Cases may echo *patterns* found in
  * real investigations (a staged scene, a falsified alibi) but must never
@@ -112,8 +113,12 @@ export const RANK_CONTENTS: Record<Rank, ContentItem[]> = {
 };
 
 export interface CaseFile {
+  /** Database id. Absent only for hand-built fixtures. */
+  id?: string;
   slug: string;
-  /** Printed on the folder tab, e.g. "CASE 001". */
+  /** Printed on the folder tab, e.g. "CASE 001". Derived from the stable
+   *  `case_number` column, not from `position`, so reordering never
+   *  renumbers a file. */
   code: string;
   title: string;
   /** One line. Sets the hook without giving away the mechanism. */
@@ -129,12 +134,15 @@ export interface CaseFile {
   /** Price in BDT. Displayed with the ৳ sign. */
   priceBdt: number;
   tags: string[];
-  /** Which document the card's preview pretends to be, e.g. "Witness statement".
-   *  Purely cosmetic until real thumbnails exist. */
-  exhibit: string;
-  /** Path to a real page thumbnail (public/ or Supabase storage URL). When
-   *  absent the card renders the generated redacted-document preview. */
+  /** Which document the card's generated preview pretends to be. Only
+   *  used when there is no `thumbnail`. */
+  exhibit?: string;
+  /** Public URL of the card thumbnail. When absent the card renders the
+   *  generated redacted-document preview. */
   thumbnail?: string;
+  /** Public URLs of preview/gallery images for the detail page, in order.
+   *  When empty the detail page renders generated redacted documents. */
+  gallery?: string[];
   /** Shown on the homepage teaser row. */
   featured?: boolean;
   /** Real manifest for the detail page. Falls back to RANK_CONTENTS[rank]. */
@@ -144,145 +152,11 @@ export interface CaseFile {
   previewDocs?: string[];
 }
 
-/** Every published case, in catalogue order (newest last). */
-export const ALL_CASES: CaseFile[] = [
-  {
-    slug: "the-rainhouse-key",
-    code: "CASE 001",
-    title: "The Rainhouse Key",
-    premise:
-      "A riverside guesthouse locked from the inside, one key on the table — and a guest who signed out three hours after he died.",
-    hook:
-      "The Rainhouse takes six guests a night and keeps a register in ink. On the fourteenth, one signature appears twice — once at check-in, and once three hours after the doctor's estimate of death. The key was on the table. The door was bolted from inside. Somebody wants you to believe the register.",
-    rank: "rookie",
-    solveMinutes: 45,
-    pages: 18,
-    priceBdt: 250,
-    tags: ["Locked room", "Two suspects"],
-    exhibit: "Guest register",
-    featured: true,
-  },
-  {
-    slug: "seventeen-minutes",
-    code: "CASE 002",
-    title: "Seventeen Minutes",
-    premise:
-      "The station's reel runs seventeen minutes short on the night its late-show host walked out of the booth and never came back.",
-    hook:
-      "Every night for nine years, the late show ran to the second. The night its host walked out mid-sentence, the station's own tape came back seventeen minutes short, and nobody in the building admits to touching it. Start with who was awake. Then work out who wasn't.",
-    rank: "senior",
-    solveMinutes: 90,
-    pages: 31,
-    priceBdt: 400,
-    tags: ["Missing person", "Audio evidence"],
-    exhibit: "Broadcast log",
-    featured: true,
-  },
-  {
-    slug: "the-ashgate-recital",
-    code: "CASE 003",
-    title: "The Ashgate Recital",
-    premise:
-      "Four musicians, one poisoned glass in the interval, and a printed programme that was quietly reset the morning of the concert.",
-    hook:
-      "Four musicians shared a glass of water in the interval; one of them didn't play the second half. The programme in your hands was reprinted that morning. The one that went to the printers the night before said something else. Find out what changed, and who needed it to.",
-    rank: "master",
-    solveMinutes: 150,
-    pages: 46,
-    priceBdt: 600,
-    tags: ["Poisoning", "Five suspects"],
-    exhibit: "Toxicology note",
-    featured: true,
-  },
-  {
-    slug: "the-ledger-at-nolpur",
-    code: "CASE 004",
-    title: "The Ledger at Nolpur",
-    premise:
-      "A jute merchant is found in his own strongroom with the books balanced to the paisa — except for one page written in a hand that isn't his.",
-    hook:
-      "The strongroom was locked, the accounts balanced to the paisa, and the merchant was inside with the door bolted. One page of the ledger is in a hand that isn't his. It's the neatest page in the book. Someone was careful — but careful about the wrong thing.",
-    rank: "rookie",
-    solveMinutes: 50,
-    pages: 20,
-    priceBdt: 250,
-    tags: ["Forgery", "Three suspects"],
-    exhibit: "Account ledger",
-  },
-  {
-    slug: "low-tide-at-charkhali",
-    code: "CASE 005",
-    title: "Low Tide at Charkhali",
-    premise:
-      "A fisherman's boat drifts back to the jetty with the nets still wet, the lamp still lit, and a second set of footprints in the silt.",
-    hook:
-      "A boat drifts back to the jetty an hour before dawn: nets wet, lamp lit, nobody aboard. The tide tables say it left on the ebb. The silt says two people walked down to it. Only one set of prints comes back.",
-    rank: "senior",
-    solveMinutes: 100,
-    pages: 34,
-    priceBdt: 400,
-    tags: ["Drowning", "Tide tables"],
-    exhibit: "Coastguard report",
-  },
-  {
-    slug: "the-night-porter",
-    code: "CASE 006",
-    title: "The Night Porter",
-    premise:
-      "Every guest on the fourth floor swears they heard the lift at 2 a.m. The lift's own log says it never left the ground.",
-    hook:
-      "Six guests on the fourth floor heard the lift at two in the morning. The lift's maintenance log — stamped, initialled, and kept in a locked drawer — says it never left the ground. Either six people are wrong about the same minute, or the log is. Decide which, and then decide why.",
-    rank: "senior",
-    solveMinutes: 85,
-    pages: 29,
-    priceBdt: 400,
-    tags: ["Hotel", "Contradicting witnesses"],
-    exhibit: "Lift maintenance log",
-  },
-  {
-    slug: "the-orchid-house",
-    code: "CASE 007",
-    title: "The Orchid House",
-    premise:
-      "A botanist dies among her plants in a greenhouse kept at exactly 28 degrees — and the thermometer says it was never opened.",
-    hook:
-      "The greenhouse is kept at twenty-eight degrees and the door is alarmed. The botanist was found among her plants at dawn; the climate chart shows the temperature never moved. Nothing came in, nothing went out. And yet something did.",
-    rank: "master",
-    solveMinutes: 160,
-    pages: 48,
-    priceBdt: 600,
-    tags: ["Sealed room", "Scientific evidence"],
-    exhibit: "Greenhouse climate chart",
-  },
-  {
-    slug: "a-wedding-in-shantinagar",
-    code: "CASE 008",
-    title: "A Wedding in Shantinagar",
-    premise:
-      "Three hundred guests, one missing groom, and a wedding video that skips exactly where the family says nothing happened.",
-    hook:
-      "Three hundred guests, four cameras, and a groom who is not in a single frame after the ninth course. The family's video skips at 9:41 and again at 9:52 — the exact minutes they say nothing happened. Watch the edges of the frame. Somebody always is.",
-    rank: "rookie",
-    solveMinutes: 40,
-    pages: 16,
-    priceBdt: 250,
-    tags: ["Missing person", "Video evidence"],
-    exhibit: "Guest list",
-  },
-];
-
-/** The homepage teaser row. Derived, so the two lists can't drift apart. */
-export const FEATURED_CASES: CaseFile[] = ALL_CASES.filter((c) => c.featured);
-
 /** Catalogue rank order, used for the filter bar and difficulty sort. */
 export const RANK_ORDER: Rank[] = ["rookie", "senior", "master"];
 
 export function isRank(value: unknown): value is Rank {
   return typeof value === "string" && value in RANKS;
-}
-
-export function getCaseBySlug(slug: string): CaseFile | undefined {
-  return ALL_CASES.find((c) => c.slug === slug);
 }
 
 /** The manifest shown on the detail page: real one if authored, else the
@@ -291,19 +165,26 @@ export function getCaseContents(caseFile: CaseFile): ContentItem[] {
   return caseFile.contents ?? RANK_CONTENTS[caseFile.rank];
 }
 
-/** Headings for the three preview documents. The case's own exhibit leads;
- *  the rest depend on what the rank's pack would actually contain. */
+/** Headings for the three generated preview documents (used only when the
+ *  case has no gallery images). The case's own exhibit leads; the rest
+ *  depend on what the rank's pack would actually contain. */
 export function getPreviewDocs(caseFile: CaseFile): string[] {
   if (caseFile.previewDocs) return caseFile.previewDocs;
   const third =
     caseFile.rank === "rookie" ? "Incident log" : "Interrogation transcript";
-  return [caseFile.exhibit, "Witness statement", third];
+  return [caseFile.exhibit ?? "Case brief", "Witness statement", third];
 }
 
-/** Up to `n` other cases, nearest rank first, for the "other files" row. */
-export function getRelatedCases(caseFile: CaseFile, n = 3): CaseFile[] {
+/** Up to `n` other cases from `pool`, nearest rank first, for the "other
+ *  files" row. */
+export function getRelatedCases(
+  caseFile: CaseFile,
+  pool: CaseFile[],
+  n = 3,
+): CaseFile[] {
   const pips = RANKS[caseFile.rank].pips;
-  return ALL_CASES.filter((c) => c.slug !== caseFile.slug)
+  return pool
+    .filter((c) => c.slug !== caseFile.slug)
     .map((c, i) => ({ c, d: Math.abs(RANKS[c.rank].pips - pips), i }))
     .sort((a, b) => a.d - b.d || a.i - b.i)
     .slice(0, n)

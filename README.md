@@ -20,7 +20,9 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:3000>.
+Then open <http://localhost:3000>. The admin is at `/admin`.
+
+Data comes from Supabase: copy `.env.example` to `.env.local`, run `supabase/migrations/0001_cases.sql` (and optionally `supabase/seed.sql`) in the SQL editor, and create one admin user under Authentication.
 
 To run the production bundle in Cloudflare's local `workerd` runtime (the closest thing to the deployed site):
 
