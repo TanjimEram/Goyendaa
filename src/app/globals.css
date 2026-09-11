@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* ============================================================
+   GOYENDA — DESIGN TOKENS
+   Single source of truth for the palette and type scale.
+   Every page must consume these as Tailwind utilities
+   (bg-noir, text-cream, font-display …) — never raw hex.
+   ============================================================ */
+
+@theme {
+  /* ── Surfaces ───────────────────────────────────────────── */
+  --color-noir: #121110; /* page background — charcoal */
+  --color-noir-raised: #1a1815; /* cards, panels */
+  --color-noir-line: #2a2724; /* hairline borders, dividers */
+
+  /* ── Ink ────────────────────────────────────────────────── */
+  --color-cream: #efe6d5; /* body + headline text — warm cream */
+  --color-ash: #8c857a; /* muted text, captions, metadata */
+
+  /* ── Accents ────────────────────────────────────────────── */
+  --color-blood: #b3231c; /* CTAs + stamps. Sparingly. */
+  --color-blood-hot: #d12a22; /* hover state for blood */
+  --color-brass: #c9a96a; /* badges, dividers, rules */
+  --color-brass-dim: #7a6743; /* inactive/secondary brass */
+
+  /* ── Type ───────────────────────────────────────────────── */
+  --font-display: var(--font-bodoni), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "Courier New", monospace;
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --ease-noir: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-noir);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    /* Cream on charcoal shimmers slightly without this. */
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-blood);
+    color: var(--color-cream);
+  }
+
+  /* One consistent focus ring everywhere, in brass. */
+  :focus-visible {
+    outline: 2px solid var(--color-brass);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ============================================================
+   MOTIFS
+   Film grain, vignette lighting, stamped-document edges.
+   ============================================================ */
+
+/* Fixed, full-viewport film grain. Mounted once in the root
+   layout so it sits over every page. Never intercepts clicks. */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-size: 200px 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Darkens the edges of a section so the centre reads as lit.
+   Apply to a `relative` container. */
+.vignette::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 38%,
+    transparent 30%,
+    rgba(0, 0, 0, 0.62) 100%
+  );
+}
+
+/* The hard offset shadow that gives cards and buttons their printed,
+   stacked-paper feel. No blur — noir has hard light.
+   Registered with @utility (not a plain class) so Tailwind variants
+   like `hover:` and `group-hover:` work on them. */
+@utility shadow-stamp {
+  box-shadow: 4px 4px 0 var(--color-brass);
+}
+
+@utility shadow-stamp-blood {
+  box-shadow: 4px 4px 0 var(--color-blood);
+}
+
+/* Redaction bar — a solid block standing in for a withheld name. */
+.redacted {
+  background-color: var(--color-cream);
+  color: transparent;
+  user-select: none;
+  border-radius: 1px;
+}
