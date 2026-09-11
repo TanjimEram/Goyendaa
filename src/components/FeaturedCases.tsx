@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { CaseCard } from "@/components/CaseCard";
 import { FEATURED_CASES } from "@/lib/cases";
+
+const COUNT_WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
 
 export function FeaturedCases() {
   return (
@@ -14,16 +17,17 @@ export function FeaturedCases() {
             The Casebook
           </p>
           <h2 className="mt-4 font-display text-4xl leading-tight font-semibold text-cream sm:text-5xl">
-            Three files currently open.
+            {COUNT_WORDS[FEATURED_CASES.length] ?? FEATURED_CASES.length} files
+            to start with.
           </h2>
         </div>
 
-        <a
-          href="#casebook"
+        <Link
+          href="/cases"
           className="shrink-0 font-mono text-[11px] uppercase tracking-[0.18em] text-ash underline-offset-8 transition-colors duration-300 ease-noir hover:text-brass hover:underline"
         >
           View all cases &rarr;
-        </a>
+        </Link>
       </div>
 
       <ul className="mt-12 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">

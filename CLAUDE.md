@@ -44,8 +44,8 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 ## Site flow
 
 1. **Homepage** — hero (video-capable), featured cases, brand story. ✅ **built**
-2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ⬜
-3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ⬜
+2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
+3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ⬜ *(`/cases/[slug]` exists only as a "PENDING" placeholder so catalog cards have somewhere to go)*
 4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (Vercel Cron over a `pending_sends` table) plus Resend. ⬜
@@ -100,30 +100,42 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: homepage complete, nothing else built.**
+**Phase: homepage + catalog complete. Case detail is next.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
 What exists:
 
 ```
-src/app/layout.tsx        root layout — fonts, metadata, film-grain overlay
-src/app/globals.css       @theme design tokens + noir motif utilities
-src/app/page.tsx          homepage composition
-src/components/           SiteHeader, Hero, CaseCard, FeaturedCases,
-                          HowItWorks, BrandStory, SiteFooter
-src/lib/cases.ts          placeholder case data, RANKS, ৳/time formatters
-public/hero-poster.svg    generated noir hero backdrop (venetian-blind light)
+src/app/layout.tsx              root layout — fonts, metadata, film-grain overlay
+src/app/globals.css             @theme design tokens + noir motif utilities
+src/app/page.tsx                homepage composition
+src/app/cases/page.tsx          catalog — static page, client grid in <Suspense>
+src/app/cases/[slug]/page.tsx   PLACEHOLDER detail page (generateStaticParams,
+                                notFound() for unknown slugs)
+src/components/                 SiteHeader, Hero, CaseCard (+DifficultyBadge),
+                                FeaturedCases, CatalogGrid ("use client"),
+                                HowItWorks, BrandStory, SiteFooter
+src/lib/cases.ts                ALL_CASES (8), FEATURED_CASES (derived),
+                                RANKS, RANK_ORDER, ৳/time formatters
+public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
 ```
+
+Catalog behaviour worth knowing:
+
+- **Filter/sort is client-side** in `CatalogGrid`. The rank filter is mirrored to `?rank=` via `history.replaceState` (Next-router-aware) so filtered views are shareable and the footer's per-rank links work. `useSearchParams` requires the `<Suspense>` wrapper in `cases/page.tsx` — remove it and the page stops prerendering.
+- **`CaseCard` is the single card component** for both the homepage teaser and the catalog. The whole card is one `<Link>` to `/cases/[slug]`; the "Take the case" button is a `<span>` inside it, not a nested anchor.
+- **Thumbnails**: `CaseFile.thumbnail` is optional. When set, the card renders `next/image` (`fill`, 16:9). When absent it renders the generated redacted-document preview headed with `CaseFile.exhibit`. No real thumbnails exist yet.
 
 Known placeholders, to be replaced:
 
-- **Case data is hard-coded** in `src/lib/cases.ts`. Shape is deliberately Supabase-ready — when the `cases` table lands, only the loader changes; `CaseCard` should not need edits.
+- **Case data is hard-coded** in `src/lib/cases.ts` — 8 invented cases. Shape is deliberately Supabase-ready — when the `cases` table lands, only the loader changes; `CaseCard`/`CatalogGrid` should not need edits.
+- **No real thumbnails.** Every card uses the generated redacted preview. Drop image paths into `CaseFile.thumbnail` to switch a card over.
+- **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
-- **Footer links are `#`.** Header/hero links are real on-page anchors.
+- **Footer "Contact / FAQ / Legal" links are `#`.** Everything else in header, hero and footer is a real route or on-page anchor.
 - **No mobile nav menu** — the header nav collapses to the wordmark + CTA below `md`. Fine while every link is an on-page anchor; needs a real menu once routes exist.
 - **`src/app/favicon.ico` is still the Next.js default.**
-- **Case count, prices and page counts in the hero stat strip are hard-coded** to match the three placeholder cases.
 
 ---
 

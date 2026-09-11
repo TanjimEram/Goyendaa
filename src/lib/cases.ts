@@ -1,5 +1,5 @@
 /**
- * Placeholder case data for the homepage teaser row.
+ * Placeholder case data for the homepage teaser row and the /cases catalog.
  *
  * This is hard-coded on purpose — Supabase is not wired up yet. When the
  * `cases` table lands, this module keeps its shape and only the loader
@@ -45,9 +45,18 @@ export interface CaseFile {
   /** Price in BDT. Displayed with the ৳ sign. */
   priceBdt: number;
   tags: string[];
+  /** Which document the card's preview pretends to be, e.g. "Witness statement".
+   *  Purely cosmetic until real thumbnails exist. */
+  exhibit: string;
+  /** Path to a real page thumbnail (public/ or Supabase storage URL). When
+   *  absent the card renders the generated redacted-document preview. */
+  thumbnail?: string;
+  /** Shown on the homepage teaser row. */
+  featured?: boolean;
 }
 
-export const FEATURED_CASES: CaseFile[] = [
+/** Every published case, in catalogue order (newest last). */
+export const ALL_CASES: CaseFile[] = [
   {
     slug: "the-rainhouse-key",
     code: "CASE 001",
@@ -59,6 +68,8 @@ export const FEATURED_CASES: CaseFile[] = [
     pages: 18,
     priceBdt: 250,
     tags: ["Locked room", "Two suspects"],
+    exhibit: "Guest register",
+    featured: true,
   },
   {
     slug: "seventeen-minutes",
@@ -71,6 +82,8 @@ export const FEATURED_CASES: CaseFile[] = [
     pages: 31,
     priceBdt: 400,
     tags: ["Missing person", "Audio evidence"],
+    exhibit: "Broadcast log",
+    featured: true,
   },
   {
     slug: "the-ashgate-recital",
@@ -83,8 +96,85 @@ export const FEATURED_CASES: CaseFile[] = [
     pages: 46,
     priceBdt: 600,
     tags: ["Poisoning", "Five suspects"],
+    exhibit: "Toxicology note",
+    featured: true,
+  },
+  {
+    slug: "the-ledger-at-nolpur",
+    code: "CASE 004",
+    title: "The Ledger at Nolpur",
+    premise:
+      "A jute merchant is found in his own strongroom with the books balanced to the paisa — except for one page written in a hand that isn't his.",
+    rank: "rookie",
+    solveMinutes: 50,
+    pages: 20,
+    priceBdt: 250,
+    tags: ["Forgery", "Three suspects"],
+    exhibit: "Account ledger",
+  },
+  {
+    slug: "low-tide-at-charkhali",
+    code: "CASE 005",
+    title: "Low Tide at Charkhali",
+    premise:
+      "A fisherman's boat drifts back to the jetty with the nets still wet, the lamp still lit, and a second set of footprints in the silt.",
+    rank: "senior",
+    solveMinutes: 100,
+    pages: 34,
+    priceBdt: 400,
+    tags: ["Drowning", "Tide tables"],
+    exhibit: "Coastguard report",
+  },
+  {
+    slug: "the-night-porter",
+    code: "CASE 006",
+    title: "The Night Porter",
+    premise:
+      "Every guest on the fourth floor swears they heard the lift at 2 a.m. The lift's own log says it never left the ground.",
+    rank: "senior",
+    solveMinutes: 85,
+    pages: 29,
+    priceBdt: 400,
+    tags: ["Hotel", "Contradicting witnesses"],
+    exhibit: "Lift maintenance log",
+  },
+  {
+    slug: "the-orchid-house",
+    code: "CASE 007",
+    title: "The Orchid House",
+    premise:
+      "A botanist dies among her plants in a greenhouse kept at exactly 28 degrees — and the thermometer says it was never opened.",
+    rank: "master",
+    solveMinutes: 160,
+    pages: 48,
+    priceBdt: 600,
+    tags: ["Sealed room", "Scientific evidence"],
+    exhibit: "Greenhouse climate chart",
+  },
+  {
+    slug: "a-wedding-in-shantinagar",
+    code: "CASE 008",
+    title: "A Wedding in Shantinagar",
+    premise:
+      "Three hundred guests, one missing groom, and a wedding video that skips exactly where the family says nothing happened.",
+    rank: "rookie",
+    solveMinutes: 40,
+    pages: 16,
+    priceBdt: 250,
+    tags: ["Missing person", "Video evidence"],
+    exhibit: "Guest list",
   },
 ];
+
+/** The homepage teaser row. Derived, so the two lists can't drift apart. */
+export const FEATURED_CASES: CaseFile[] = ALL_CASES.filter((c) => c.featured);
+
+/** Catalogue rank order, used for the filter bar and difficulty sort. */
+export const RANK_ORDER: Rank[] = ["rookie", "senior", "master"];
+
+export function isRank(value: unknown): value is Rank {
+  return typeof value === "string" && value in RANKS;
+}
 
 /** Formats a BDT price for display, e.g. `৳ 250`. */
 export function formatTaka(amount: number): string {

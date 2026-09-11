@@ -1,19 +1,23 @@
-/* All hrefs are placeholders until the real routes exist. */
+import Link from "next/link";
+import { RANKS, RANK_ORDER } from "@/lib/cases";
+
+/* "#" hrefs are placeholders until those routes exist. */
 const FOOTER_COLUMNS = [
   {
     heading: "Cases",
     links: [
-      { label: "All cases", href: "#" },
-      { label: "Rookie Goyenda", href: "#" },
-      { label: "Senior Goyenda", href: "#" },
-      { label: "Master Goyenda", href: "#" },
+      { label: "All cases", href: "/cases" },
+      ...RANK_ORDER.map((rank) => ({
+        label: RANKS[rank].label,
+        href: `/cases?rank=${rank}`,
+      })),
     ],
   },
   {
     heading: "Goyenda",
     links: [
-      { label: "About", href: "#about" },
-      { label: "How it works", href: "#how-it-works" },
+      { label: "About", href: "/#about" },
+      { label: "How it works", href: "/#how-it-works" },
       { label: "Contact", href: "#" },
       { label: "FAQ", href: "#" },
     ],
@@ -61,12 +65,12 @@ export function SiteFooter() {
               <ul className="mt-5 flex flex-col gap-3">
                 {column.links.map((link) => (
                   <li key={link.label}>
-                    <a
+                    <Link
                       href={link.href}
                       className="text-sm text-ash transition-colors duration-300 ease-noir hover:text-cream"
                     >
                       {link.label}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -6,13 +6,24 @@
  * nothing else needs to change. The video is decorative — muted, looping,
  * and never the sole carrier of information.
  */
+import Link from "next/link";
+import { ALL_CASES, formatTaka } from "@/lib/cases";
+
 const HERO_VIDEO_SRC: string = "";
 const HERO_POSTER = "/hero-poster.svg";
 
+// Derived from the catalogue so the numbers can't go stale.
+const pageCounts = ALL_CASES.map((c) => c.pages);
 const STATS = [
-  { value: "3", label: "Cases open" },
-  { value: "৳ 250+", label: "Per file" },
-  { value: "18–46", label: "Printed pages" },
+  { value: String(ALL_CASES.length), label: "Cases open" },
+  {
+    value: `${formatTaka(Math.min(...ALL_CASES.map((c) => c.priceBdt)))}+`,
+    label: "Per file",
+  },
+  {
+    value: `${Math.min(...pageCounts)}–${Math.max(...pageCounts)}`,
+    label: "Printed pages",
+  },
 ];
 
 export function Hero() {
@@ -78,8 +89,8 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <a
-            href="#casebook"
+          <Link
+            href="/cases"
             className="group inline-flex items-center justify-center gap-3 bg-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp"
           >
             Open a case
@@ -89,7 +100,7 @@ export function Hero() {
             >
               &rarr;
             </span>
-          </a>
+          </Link>
           <a
             href="#how-it-works"
             className="inline-flex items-center justify-center border border-noir-line px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-colors duration-300 ease-noir hover:border-brass hover:text-brass"

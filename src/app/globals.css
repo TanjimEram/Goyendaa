@@ -126,3 +126,15 @@
   user-select: none;
   border-radius: 1px;
 }
+
+/* Faint pin-hole grid behind the catalogue cards — the evidence-board
+   motif without cork textures or string. */
+.evidence-board {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-brass) 14%, transparent) 1px,
+    transparent 1.4px
+  );
+  background-size: 28px 28px;
+  background-position: 14px 14px;
+}
