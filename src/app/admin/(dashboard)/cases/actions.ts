@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { RANKS, isRank } from "@/lib/cases";
+import { RANKS, isRank, parseContentsText, type ContentItem } from "@/lib/cases";
 import { getCaseByIdAdmin } from "@/lib/cases-data";
 import { SLUG_PATTERN, slugify } from "@/lib/slug";
 import { MEDIA_BUCKET, FILES_BUCKET, publicUrlToPath } from "@/lib/storage";
@@ -28,6 +28,11 @@ interface CaseWrite {
   gallery_urls: string[];
   case_pdf_path: string | null;
   solution_pdf_path: string | null;
+  purchase_info: string | null;
+  delivery_info: string | null;
+  contents: ContentItem[];
+  player_note: string | null;
+  content_note: string | null;
   tags: string[];
   solve_minutes: number;
   page_count: number;
@@ -106,6 +111,11 @@ function parseCaseForm(fd: FormData):
       gallery_urls: list(fd, "gallery_urls"),
       case_pdf_path: str(fd, "case_pdf_path") || null,
       solution_pdf_path: str(fd, "solution_pdf_path") || null,
+      purchase_info: str(fd, "purchase_info") || null,
+      delivery_info: str(fd, "delivery_info") || null,
+      contents: parseContentsText(str(fd, "contents_text")),
+      player_note: str(fd, "player_note") || null,
+      content_note: str(fd, "content_note") || null,
       tags,
       solve_minutes,
       page_count,

@@ -52,7 +52,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 - **Worker name is `goyendaa`** (`wrangler.jsonc` → `name`). It must match the dashboard exactly or wrangler overrides it with a warning on every deploy.
 - **Secrets** (Supabase, Resend, payment keys) go in as Worker secrets via the dashboard or `wrangler secret put`, and locally in `.dev.vars` (gitignored). Never in `wrangler.jsonc`, never in `NEXT_PUBLIC_*` unless truly public.
 - **Not configured yet, by design:** R2 incremental cache (nothing uses ISR), `IMAGES` binding (no real thumbnails yet; without it OpenNext serves the original file), cron triggers (no delivery job yet). Each is a one-line addition to `wrangler.jsonc` when needed — see the comments there.
-- **Verified 2026-09-11:** all routes render identically under `workerd` via `npm run preview` — homepage, catalog filter/sort, SSG detail pages, 404s.
+- **Verified 2026-09-12 against the live Supabase project:** `/`, `/cases`, `/cases/[slug]` read real rows; RLS confirmed (anon sees published only, cannot insert). **Verified 2026-09-11:** all routes render identically under `workerd` via `npm run preview` — homepage, catalog filter/sort, SSG detail pages, 404s.
 
 ---
 
@@ -151,6 +151,9 @@ src/app/admin/(dashboard)/      guarded layout, list, cases/new,
 src/components/admin/           LoginForm, CaseForm, FileUpload,
                                 DeleteCaseButton
 supabase/migrations/0001_cases.sql   table, RLS, buckets, storage policies
+supabase/migrations/0002_case_copy.sql   per-case copy: purchase_info,
+                                delivery_info, contents (jsonb), player_note,
+                                content_note
 supabase/seed.sql               the eight placeholder cases
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
 wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)
@@ -179,7 +182,8 @@ Catalog behaviour worth knowing:
 Case detail behaviour worth knowing:
 
 - **Two buy surfaces, one href.** `PurchasePanel` is the sticky aside from `lg` up; `PurchaseBar` is a bottom-pinned bar below `lg` (the page adds `pb-24 lg:pb-0` to `<main>` so the footer clears it). Both call `checkoutHref()` → `/checkout/[slug]`. Change the checkout URL in one place.
-- **"What's in the file" is templated by rank** (`RANK_CONTENTS`) until a case sets its own `contents[]`. Any item whose label contains "solution" is rendered as the full-width "Sealed" row.
+- **"What's in the file"** uses the case's `contents` (jsonb, edited in the admin as one-item-per-line text via `parseContentsText`/`contentsToText`) and falls back to the rank template `RANK_CONTENTS` when empty. Any item whose label contains "solution" is rendered as the full-width "Sealed" row.
+- **Buying/delivery copy is per case** (`purchase_info`, `delivery_info`, one bullet per line) with rank-aware defaults from `defaultPurchaseInfo()` / `defaultDeliveryInfo(rank)`. `buyingLines()` in `PurchasePanel.tsx` merges them; rendered in the buy panel (lg+) and the "How it works" block (all sizes). `player_note` joins the meta line; `content_note` sits under it.
 - **Previews are div mock-ups** (`RedactedDocument`, three layouts picked from the heading by `variantFor`). Headings come from `getPreviewDocs()`: the case's `exhibit` + two rank-based defaults, unless the case sets `previewDocs[]`. When real page scans exist, swap the body for an `<Image>` and keep the frame + PREVIEW stamp.
 - **`CaseFile.hook`** is the 2–3 sentence teaser on the detail page; `premise` stays the one-liner on cards. Both must tease without naming the mechanism.
 - **Difficulty explanation** lives in `RankGuide` (`#difficulty`), reached from the badge in the header; the badge's `title` carries `RANKS[rank].tagline` as a tooltip.
@@ -189,9 +193,8 @@ Known placeholders, to be replaced:
 - **The eight placeholder cases live in `supabase/seed.sql`**, not in code. Run it once for content; edit/delete them from `/admin`.
 - **No real thumbnails or page scans yet.** Cards use the generated redacted preview until a thumbnail is uploaded; the detail page renders uploaded gallery images (first three) and falls back to div mock-ups.
 - **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
-- **Contents list is still the rank template** — no per-case manifest UI in the admin yet (`CaseFile.contents` exists in the type for when there is).
 - **No drag-reorder in admin** — `position` is set on create (appended) and only editable via SQL until the next pass.
-- **Contents lists are rank templates, not real manifests.** Counts (3 / 5 / 7 witness statements etc.) are invented and don't reconcile exactly with `pages`. Real cases should set `contents[]`.
+- **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
 - **`/checkout/[slug]` does not exist** — every Buy button 404s. Next build step.
 - **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.

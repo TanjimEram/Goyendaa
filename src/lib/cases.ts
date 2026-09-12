@@ -150,6 +150,74 @@ export interface CaseFile {
   /** Headings for the three redacted preview documents. Falls back to a
    *  rank-based default built around `exhibit`. */
   previewDocs?: string[];
+  /** "How to buy" copy. Empty → defaultPurchaseInfo(). */
+  purchaseInfo?: string;
+  /** "How and when the solution arrives" copy. Empty → defaultDeliveryInfo(rank). */
+  deliveryInfo?: string;
+  /** e.g. "Best with 2–4 people." */
+  playerNote?: string;
+  /** Themes / content warning. */
+  contentNote?: string;
+}
+
+// ── Editorial defaults ───────────────────────────────────────────────
+// One line per bullet. The admin form prefills these so the wording is
+// editable per case, and the site falls back to them when a case's copy
+// is blank.
+
+export function defaultPurchaseInfo(): string {
+  return [
+    "Pay with bKash, Nagad or card. No account needed.",
+    "The case-file PDF downloads the moment payment clears. Print at home, A4.",
+    "One purchase, unlimited reprints — play it with as many people as you like.",
+  ].join("\n");
+}
+
+export function defaultDeliveryInfo(rank: Rank): string {
+  const h = RANKS[rank].solutionDelayHours;
+  return [
+    `The solution is emailed ${h} hour${h === 1 ? "" : "s"} after purchase — not with the download, so you can't peek.`,
+    "It goes to the email address you pay with. Check spam if it hasn't arrived on time.",
+  ].join("\n");
+}
+
+/** Splits admin-entered copy into non-empty trimmed lines. */
+export function toLines(text: string | undefined | null): string[] {
+  return (text ?? "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Parses the admin's "what's in the file" textarea, one item per line:
+ *   3 × Witness statements — Signed, dated, and not all of them careful.
+ *   Case brief — The investigating officer's summary.
+ *   Scene map
+ * Accepts "×", "x" or "*" as the multiplier and "—", "–" or " - " as the
+ * separator. Lines without a detail get an empty one.
+ */
+export function parseContentsText(text: string): ContentItem[] {
+  return toLines(text).map((line) => {
+    let rest = line;
+    let count: number | undefined;
+    const m = rest.match(/^(\d+)\s*[×x*]\s*/i);
+    if (m) {
+      count = Number.parseInt(m[1], 10);
+      rest = rest.slice(m[0].length);
+    }
+    const sep = rest.search(/\s+[—–-]\s+|\s*—\s*/);
+    const label = (sep === -1 ? rest : rest.slice(0, sep)).trim();
+    const detail = sep === -1 ? "" : rest.slice(sep).replace(/^\s*[—–-]\s*/, "").trim();
+    return count ? { label, count, detail } : { label, detail };
+  }).filter((i) => i.label);
+}
+
+/** Inverse of parseContentsText, for prefilling the textarea. */
+export function contentsToText(items: ContentItem[]): string {
+  return items
+    .map((i) => `${i.count ? `${i.count} × ` : ""}${i.label}${i.detail ? ` — ${i.detail}` : ""}`)
+    .join("\n");
 }
 
 /** Catalogue rank order, used for the filter bar and difficulty sort. */
@@ -162,7 +230,7 @@ export function isRank(value: unknown): value is Rank {
 /** The manifest shown on the detail page: real one if authored, else the
  *  rank template. */
 export function getCaseContents(caseFile: CaseFile): ContentItem[] {
-  return caseFile.contents ?? RANK_CONTENTS[caseFile.rank];
+  return caseFile.contents?.length ? caseFile.contents : RANK_CONTENTS[caseFile.rank];
 }
 
 /** Headings for the three generated preview documents (used only when the

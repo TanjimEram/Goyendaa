@@ -5,6 +5,7 @@ import { CaseCard, DifficultyBadge } from "@/components/CaseCard";
 import {
   PurchaseBar,
   PurchasePanel,
+  buyingLines,
   checkoutHref,
 } from "@/components/PurchasePanel";
 import { RankGuide } from "@/components/RankGuide";
@@ -140,7 +141,13 @@ export default async function CaseDetailPage({
                 <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
                   {rank.timeRange} &middot; {rank.suspects} &middot;{" "}
                   {caseFile.pages} printed pages
+                  {caseFile.playerNote && <> &middot; {caseFile.playerNote}</>}
                 </p>
+                {caseFile.contentNote && (
+                  <p className="mt-3 max-w-xl border-l-2 border-brass-dim pl-3 text-xs leading-[1.7] text-ash">
+                    {caseFile.contentNote}
+                  </p>
+                )}
               </div>
 
               {/* Desktop buy box. On phones the pinned PurchaseBar takes over. */}
@@ -197,6 +204,32 @@ export default async function CaseDetailPage({
               );
             })}
           </ol>
+        </section>
+
+        {/* ── Buying & delivery ───────────────────────────────── */}
+        <section
+          aria-labelledby="buying-heading"
+          className="mx-auto w-full max-w-6xl px-5 pb-16 sm:px-8 sm:pb-20"
+        >
+          <div className="grid gap-8 border border-noir-line bg-noir-raised/40 p-6 sm:grid-cols-2 sm:p-8">
+            <div>
+              <Eyebrow>Buying this file</Eyebrow>
+              <h2
+                id="buying-heading"
+                className="mt-3 font-display text-2xl font-semibold text-cream"
+              >
+                How it works.
+              </h2>
+            </div>
+            <ul className="flex flex-col gap-3 text-sm leading-[1.7] text-ash">
+              {buyingLines(caseFile).map((line) => (
+                <li key={line} className="flex gap-3">
+                  <span className="mt-[9px] h-1 w-1 shrink-0 bg-brass" aria-hidden />
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         {/* ── Previews ────────────────────────────────────────── */}

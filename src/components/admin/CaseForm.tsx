@@ -4,7 +4,15 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { saveCase, type CaseFormState } from "@/app/admin/(dashboard)/cases/actions";
 import { FileUpload } from "@/components/admin/FileUpload";
-import { RANKS, RANK_ORDER, type Rank } from "@/lib/cases";
+import {
+  RANKS,
+  RANK_ORDER,
+  RANK_CONTENTS,
+  contentsToText,
+  defaultDeliveryInfo,
+  defaultPurchaseInfo,
+  type Rank,
+} from "@/lib/cases";
 import type { CaseRow } from "@/lib/cases-data";
 import { slugify } from "@/lib/slug";
 import { FILES_BUCKET, MEDIA_BUCKET } from "@/lib/storage";
@@ -49,6 +57,8 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
     {},
   );
   const f = state.fields ?? {};
+
+  const [rank, setRank] = useState<Rank>(initial?.difficulty_rank ?? "rookie");
 
   // Slug follows the title until the admin edits it by hand.
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -168,7 +178,8 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <select
             id="difficulty_rank"
             name="difficulty_rank"
-            defaultValue={initial?.difficulty_rank ?? "rookie"}
+            value={rank}
+            onChange={(e) => setRank(e.target.value as Rank)}
             className={INPUT}
           >
             {RANK_ORDER.map((r: Rank) => (
@@ -219,9 +230,101 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
         </Field>
       </section>
 
+      {/* ── What's in the file ───────────────────────────────── */}
+      <section className="grid gap-6 border border-noir-line bg-noir-raised/40 p-6">
+        <h2 className="font-display text-xl text-cream">What&rsquo;s in the file</h2>
+        <Field
+          label="Contents — one item per line"
+          name="contents_text"
+          hint={`Format: "3 × Witness statements — one line of detail". Count and detail are optional. Leave empty to use the ${RANKS[rank].label} template shown below.`}
+        >
+          <textarea
+            id="contents_text"
+            name="contents_text"
+            rows={8}
+            defaultValue={contentsToText(initial?.contents ?? [])}
+            placeholder={contentsToText(RANK_CONTENTS[rank])}
+            className={`${INPUT} font-mono text-xs leading-relaxed`}
+          />
+        </Field>
+      </section>
+
+      {/* ── Buying & delivery ────────────────────────────────── */}
+      <section className="grid gap-6 border border-noir-line bg-noir-raised/40 p-6 sm:grid-cols-2">
+        <h2 className="font-display text-xl text-cream sm:col-span-2">
+          Buying &amp; delivery
+          <span className="ml-3 font-sans text-xs font-normal text-ash">
+            Shown in the buy panel and on the detail page. One bullet per line.
+          </span>
+        </h2>
+
+        <Field
+          label="How to buy"
+          name="purchase_info"
+          hint="Blank = the default wording below."
+        >
+          <textarea
+            id="purchase_info"
+            name="purchase_info"
+            rows={4}
+            defaultValue={initial?.purchase_info ?? ""}
+            placeholder={defaultPurchaseInfo()}
+            className={INPUT}
+          />
+        </Field>
+
+        <Field
+          label="How and when the solution arrives"
+          name="delivery_info"
+          hint={`Blank = the default for ${RANKS[rank].label} (+${RANKS[rank].solutionDelayHours}h).`}
+        >
+          <textarea
+            id="delivery_info"
+            name="delivery_info"
+            rows={4}
+            defaultValue={initial?.delivery_info ?? ""}
+            placeholder={defaultDeliveryInfo(rank)}
+            className={INPUT}
+          />
+        </Field>
+
+        <Field
+          label="Players"
+          name="player_note"
+          hint="e.g. Best with 2–4 people. Works solo."
+        >
+          <input
+            id="player_note"
+            name="player_note"
+            defaultValue={initial?.player_note ?? ""}
+            className={INPUT}
+          />
+        </Field>
+
+        <Field
+          label="Themes / content note"
+          name="content_note"
+          hint="e.g. Contains references to poisoning and domestic violence. 16+."
+        >
+          <input
+            id="content_note"
+            name="content_note"
+            defaultValue={initial?.content_note ?? ""}
+            className={INPUT}
+          />
+        </Field>
+      </section>
+
       {/* ── Media ────────────────────────────────────────────── */}
       <section className="grid gap-8 border border-noir-line bg-noir-raised/40 p-6">
         <h2 className="font-display text-xl text-cream">Images</h2>
+
+        {thumbnail.length === 0 && (
+          <p className="border border-dashed border-noir-line px-4 py-3 text-xs text-ash">
+            No thumbnail yet &mdash; the card will show the generated redacted-document
+            placeholder until you upload one.
+          </p>
+        )}
 
         <FileUpload
           label="Thumbnail"

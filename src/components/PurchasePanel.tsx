@@ -2,10 +2,23 @@ import Link from "next/link";
 import { DifficultyBadge } from "@/components/CaseCard";
 import {
   RANKS,
+  defaultDeliveryInfo,
+  defaultPurchaseInfo,
   formatSolveTime,
   formatTaka,
+  toLines,
   type CaseFile,
 } from "@/lib/cases";
+
+/** Purchase + delivery bullets, falling back to the rank defaults. */
+export function buyingLines(caseFile: CaseFile): string[] {
+  const purchase = toLines(caseFile.purchaseInfo);
+  const delivery = toLines(caseFile.deliveryInfo);
+  return [
+    ...(purchase.length ? purchase : toLines(defaultPurchaseInfo())),
+    ...(delivery.length ? delivery : toLines(defaultDeliveryInfo(caseFile.rank))),
+  ];
+}
 
 /** Where "Buy case file" goes. Checkout is not built yet; this 404s. */
 export function checkoutHref(caseFile: CaseFile) {
@@ -67,21 +80,12 @@ export function PurchasePanel({ caseFile }: { caseFile: CaseFile }) {
       </Link>
 
       <ul className="mt-5 flex flex-col gap-2 text-xs leading-[1.6] text-ash">
-        <li className="flex gap-2.5">
-          <span className="mt-[7px] h-1 w-1 shrink-0 bg-brass" aria-hidden />
-          PDF download the moment payment clears. Print at home, A4.
-        </li>
-        <li className="flex gap-2.5">
-          <span className="mt-[7px] h-1 w-1 shrink-0 bg-brass" aria-hidden />
-          The solution is emailed {rank.solutionDelayHours} hour
-          {rank.solutionDelayHours === 1 ? "" : "s"} after purchase &mdash;
-          not with the download, so you can&rsquo;t peek.
-        </li>
-        <li className="flex gap-2.5">
-          <span className="mt-[7px] h-1 w-1 shrink-0 bg-brass" aria-hidden />
-          One purchase, unlimited reprints. Play it with as many people as you
-          like.
-        </li>
+        {buyingLines(caseFile).map((line) => (
+          <li key={line} className="flex gap-2.5">
+            <span className="mt-[7px] h-1 w-1 shrink-0 bg-brass" aria-hidden />
+            {line}
+          </li>
+        ))}
       </ul>
 
       <p className="mt-5 border-t border-noir-line pt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">

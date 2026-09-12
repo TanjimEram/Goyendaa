@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient, createPublicClient } from "@/lib/supabase/server";
-import { isRank, type CaseFile, type Rank } from "@/lib/cases";
+import { isRank, type CaseFile, type ContentItem, type Rank } from "@/lib/cases";
 
 /** One row of `public.cases`, as Supabase returns it. */
 export interface CaseRow {
@@ -20,6 +20,11 @@ export interface CaseRow {
   gallery_urls: string[];
   case_pdf_path: string | null;
   solution_pdf_path: string | null;
+  purchase_info: string | null;
+  delivery_info: string | null;
+  contents: ContentItem[];
+  player_note: string | null;
+  content_note: string | null;
   tags: string[];
   solve_minutes: number;
   page_count: number;
@@ -30,7 +35,7 @@ export interface CaseRow {
 /** The columns the public site needs. Listed explicitly so the PDF paths
  *  never travel to the public pages by accident. */
 const PUBLIC_COLUMNS =
-  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, page_count";
+  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, page_count, purchase_info, delivery_info, contents, player_note, content_note";
 
 /** DB row → the shape every component already renders. */
 export function rowToCaseFile(row: CaseRow): CaseFile {
@@ -50,6 +55,11 @@ export function rowToCaseFile(row: CaseRow): CaseFile {
     thumbnail: row.thumbnail_url ?? undefined,
     gallery: row.gallery_urls ?? [],
     featured: row.featured,
+    contents: Array.isArray(row.contents) ? row.contents : [],
+    purchaseInfo: row.purchase_info ?? undefined,
+    deliveryInfo: row.delivery_info ?? undefined,
+    playerNote: row.player_note ?? undefined,
+    contentNote: row.content_note ?? undefined,
   };
 }
 
