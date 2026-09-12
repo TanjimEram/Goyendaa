@@ -64,7 +64,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜ *(detail page already links to `/checkout/[slug]`, which 404s until this is built)*
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
-7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle. ✅ **built** (`/admin`). Still to come: drag-reorder (next pass), order list, minimal theme settings. Deliberately **not** a full CMS.
+7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle, drag-reorder. ✅ **built** (`/admin`). Still to come: order list, minimal theme settings. Deliberately **not** a full CMS.
 
 ### Difficulty ranks
 
@@ -115,7 +115,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: public pages + admin dashboard complete, reading/writing Supabase. Next: drag-reorder in admin, then checkout placeholder + success page.**
+**Phase: public pages + admin dashboard (incl. reorder) complete, reading/writing Supabase. Next: checkout placeholder + success page.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -149,11 +149,12 @@ src/app/admin/login/            server page + actions (login/logout)
 src/app/admin/(dashboard)/      guarded layout, list, cases/new,
                                 cases/[id]/edit, cases/actions.ts
 src/components/admin/           LoginForm, CaseForm, FileUpload,
-                                DeleteCaseButton
+                                DeleteCaseButton, CaseTable (drag-reorder)
 supabase/migrations/0001_cases.sql   table, RLS, buckets, storage policies
 supabase/migrations/0002_case_copy.sql   per-case copy: purchase_info,
                                 delivery_info, contents (jsonb), player_note,
                                 content_note
+supabase/migrations/0003_reorder.sql   reorder_cases(uuid[]) RPC
 supabase/seed.sql               the eight placeholder cases
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
 wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)
@@ -170,6 +171,7 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **File uploads go browser → Storage directly** (`FileUpload` uses the browser client + admin session). Nothing streams through the Worker, so there's no request-size ceiling to hit. Public bucket values are stored as public URLs; private bucket values as object paths.
 - **Gallery is a `text[]` column** (`gallery_urls`), not a `case_images` table — one row, one form, array order = display order. Revisit only if images need captions or per-image metadata.
 - **`case_number` (identity) drives "CASE 007"; `position` drives ordering.** Reordering never renumbers a file.
+- **Reordering** is client-side in `CaseTable` (native HTML5 drag-and-drop plus ▲/▼ buttons for touch/keyboard) and only persists on "Save order", which calls `reorderCases(ids)` → the `reorder_cases` RPC: one statement sets `position = 1..n`. `CaseTable` is keyed on the id list so a server refresh after create/delete resets its local state.
 - **Deleting a case removes its storage objects** (best-effort). Removing a file inside the form only detaches it; the object stays until the case is deleted — orphans are possible after abandoned edits.
 - **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
 
@@ -193,7 +195,6 @@ Known placeholders, to be replaced:
 - **The eight placeholder cases live in `supabase/seed.sql`**, not in code. Run it once for content; edit/delete them from `/admin`.
 - **No real thumbnails or page scans yet.** Cards use the generated redacted preview until a thumbnail is uploaded; the detail page renders uploaded gallery images (first three) and falls back to div mock-ups.
 - **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
-- **No drag-reorder in admin** — `position` is set on create (appended) and only editable via SQL until the next pass.
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
 - **`/checkout/[slug]` does not exist** — every Buy button 404s. Next build step.
 - **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").

@@ -200,6 +200,27 @@ export async function deleteCase(formData: FormData) {
   revalidateCasePages(existing.slug);
 }
 
+/**
+ * Persists a new catalogue order. `ids` is every case id in the desired
+ * order; positions become 1..n. One RPC, one transaction.
+ */
+export async function reorderCases(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await requireAdmin();
+  const clean = ids.filter((id) => typeof id === "string" && id.length > 0);
+  if (!clean.length) return { error: "Nothing to reorder." };
+
+  const { error } = await supabase.rpc("reorder_cases", { ids: clean });
+  if (error) {
+    if (error.message.includes("reorder_cases")) {
+      return { error: "Run supabase/migrations/0003_reorder.sql first." };
+    }
+    return { error: friendlyDbError(error.message) };
+  }
+
+  revalidateCasePages();
+  return {};
+}
+
 /** Translate the few Postgres errors an admin can actually cause. */
 function friendlyDbError(message: string): string {
   if (message.includes("cases_slug_key")) return "That slug is already taken.";
