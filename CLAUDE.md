@@ -62,7 +62,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
 4. **Checkout** — `/checkout/[slug]` page ✅ **built** (order summary, email, bKash/Nagad/card choice, terms) behind a provider-agnostic seam in `src/lib/payments.ts`. The placeholder provider returns `unavailable`, so the page ends in a "Payments aren't open yet" panel. ⬜ Real aggregator (UddoktaPay / BangoPay) still to wire.
-5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
+5. **Success page** — `/checkout/[slug]/success` ✅ **designed** with a MOCK order (`mockOrder()` in `src/lib/orders.ts`, visible "Preview · mock order" strip). Download button is a dead `#` until signed URLs exist. ⬜ Real order lookup + download route still to build.
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
 7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle, drag-reorder. ✅ **built** (`/admin`). Still to come: order list, minimal theme settings. Deliberately **not** a full CMS.
 
@@ -115,7 +115,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: public pages, admin dashboard and checkout placeholder complete. Next: success page + download, then a real payment provider.**
+**Phase: every page exists; checkout and success run on placeholders. Next: orders table + real payment provider + webhook + signed download + solution-delivery cron.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -147,6 +147,10 @@ src/lib/slug.ts                 slugify + SLUG_PATTERN
 src/lib/payments.ts             PaymentProvider seam, PAYMENT_METHODS,
                                 placeholder provider, getPaymentProvider()
 src/app/checkout/[slug]/        page (summary + form) and startCheckout action
+src/app/checkout/[slug]/success/  post-payment page (mock order for now)
+src/lib/orders.ts               Order type (future orders row), mockOrder,
+                                solutionTimeFor, Dhaka-time formatters
+src/components/SolutionCountdown.tsx  live "in 2h 41m" via useSyncExternalStore
 src/components/CheckoutForm.tsx client form → "not open yet" panel
 src/app/not-found.tsx           styled 404 ("This trail's gone cold.")
 src/proxy.ts                    guards /admin/*, refreshes session cookie
@@ -189,7 +193,8 @@ Catalog behaviour worth knowing:
 Checkout behaviour worth knowing:
 
 - **Provider seam.** `startCheckout` validates (email, method, terms), re-reads the case server-side (the form's price is display only), then calls `getPaymentProvider().createCheckout()`. Results: `redirect` (send buyer to the hosted page), `unavailable` (placeholder — show the panel), `error`. A real provider = one new file + a `case` in `getPaymentProvider()` keyed on `PAYMENT_PROVIDER`.
-- **Nothing is persisted yet.** No `orders` table; that lands with the real provider + webhook, alongside the success page.
+- **Nothing is persisted yet.** No `orders` table; that lands with the real provider + webhook. `Order` in `src/lib/orders.ts` is the intended row shape — the success page already renders from it, so wiring real data means replacing `mockOrder()` with a lookup by `?order=` ref and deleting the preview strip.
+- **Solution timing is computed from `paidAt`**, never from download time (`solutionTimeFor`). Times display in Asia/Dhaka.
 - **Email is the delivery address** for both the case PDF and the delayed solution. The form says so.
 - **Terms link is `#`** — no terms page yet.
 
