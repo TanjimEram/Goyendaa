@@ -61,7 +61,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 1. **Homepage** — hero (video-capable), featured cases, brand story. ✅ **built**
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
-4. **Checkout** — BD aggregator, provider-agnostic where possible. ⬜ *(detail page already links to `/checkout/[slug]`, which 404s until this is built)*
+4. **Checkout** — `/checkout/[slug]` page ✅ **built** (order summary, email, bKash/Nagad/card choice, terms) behind a provider-agnostic seam in `src/lib/payments.ts`. The placeholder provider returns `unavailable`, so the page ends in a "Payments aren't open yet" panel. ⬜ Real aggregator (UddoktaPay / BangoPay) still to wire.
 5. **Success page** — immediate case-PDF download + clear messaging on when the solution arrives. ⬜
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
 7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle, drag-reorder. ✅ **built** (`/admin`). Still to come: order list, minimal theme settings. Deliberately **not** a full CMS.
@@ -115,7 +115,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: public pages + admin dashboard (incl. reorder) complete, reading/writing Supabase. Next: checkout placeholder + success page.**
+**Phase: public pages, admin dashboard and checkout placeholder complete. Next: success page + download, then a real payment provider.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -144,6 +144,11 @@ src/lib/supabase/{env,client,server}.ts
                                 (cookie-aware + anonymous public)
 src/lib/storage.ts              bucket names, URL↔path helpers
 src/lib/slug.ts                 slugify + SLUG_PATTERN
+src/lib/payments.ts             PaymentProvider seam, PAYMENT_METHODS,
+                                placeholder provider, getPaymentProvider()
+src/app/checkout/[slug]/        page (summary + form) and startCheckout action
+src/components/CheckoutForm.tsx client form → "not open yet" panel
+src/app/not-found.tsx           styled 404 ("This trail's gone cold.")
 src/proxy.ts                    guards /admin/*, refreshes session cookie
 src/app/admin/login/            server page + actions (login/logout)
 src/app/admin/(dashboard)/      guarded layout, list, cases/new,
@@ -181,6 +186,13 @@ Catalog behaviour worth knowing:
 - **`CaseCard` is the single card component** for both the homepage teaser and the catalog. The whole card is one `<Link>` to `/cases/[slug]`; the "Take the case" button is a `<span>` inside it, not a nested anchor.
 - **Thumbnails**: `CaseFile.thumbnail` is optional. When set, the card renders `next/image` (`fill`, 16:9). When absent it renders the generated redacted-document preview headed with `CaseFile.exhibit`. No real thumbnails exist yet.
 
+Checkout behaviour worth knowing:
+
+- **Provider seam.** `startCheckout` validates (email, method, terms), re-reads the case server-side (the form's price is display only), then calls `getPaymentProvider().createCheckout()`. Results: `redirect` (send buyer to the hosted page), `unavailable` (placeholder — show the panel), `error`. A real provider = one new file + a `case` in `getPaymentProvider()` keyed on `PAYMENT_PROVIDER`.
+- **Nothing is persisted yet.** No `orders` table; that lands with the real provider + webhook, alongside the success page.
+- **Email is the delivery address** for both the case PDF and the delayed solution. The form says so.
+- **Terms link is `#`** — no terms page yet.
+
 Case detail behaviour worth knowing:
 
 - **Two buy surfaces, one href.** `PurchasePanel` is the sticky aside from `lg` up; `PurchaseBar` is a bottom-pinned bar below `lg` (the page adds `pb-24 lg:pb-0` to `<main>` so the footer clears it). Both call `checkoutHref()` → `/checkout/[slug]`. Change the checkout URL in one place.
@@ -196,8 +208,7 @@ Known placeholders, to be replaced:
 - **No real thumbnails or page scans yet.** Cards use the generated redacted preview until a thumbnail is uploaded; the detail page renders uploaded gallery images (first three) and falls back to div mock-ups.
 - **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
-- **`/checkout/[slug]` does not exist** — every Buy button 404s. Next build step.
-- **Default Next.js 404 page** — unknown `/cases/[slug]` correctly 404s but with the unstyled default. Needs a `src/app/not-found.tsx` ("This trail's gone cold.").
+- **Checkout can't take money** — placeholder provider only. Success page + orders table + real aggregator are the next steps.
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
 - **Footer "Contact / FAQ / Legal" links are `#`.** Everything else in header, hero and footer is a real route or on-page anchor.
 - **No mobile nav menu** — the header nav collapses to the wordmark + CTA below `md`. Fine while every link is an on-page anchor; needs a real menu once routes exist.
