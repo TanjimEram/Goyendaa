@@ -32,7 +32,7 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | Styling | **Tailwind CSS v4** — tokens in `@theme` in `src/app/globals.css` | in place |
 | Fonts | `next/font/google` — Bodoni Moda, Inter, IBM Plex Mono | in place |
 | DB + storage | **Supabase** (free tier) — Postgres `cases` table, Auth (one admin user), Storage (`case-media` public, `case-files` private) | wired up |
-| Transactional email | **Resend** (free tier) | not wired up |
+| Transactional email | **Resend** (free tier), REST via `src/lib/email.ts` | wired up; needs `RESEND_API_KEY` + a verified domain for real buyer addresses |
 | Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`) — polls a table of pending solution sends | not built |
 | Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | configured, not yet deployed |
 | Payments | UddoktaPay **or** BangoPay (TBD) | not built |
@@ -165,10 +165,17 @@ src/app/{favicon.ico,icon.png,apple-icon.png,opengraph-image.png,
                                 masters outside the repo, regenerate with
                                 sharp (ICO entries must be RGBA PNGs)
 src/proxy.ts                    guards /admin/*, refreshes session cookie
-src/app/admin/login/            server page + actions (login/logout)
+src/app/admin/login/            server page + actions (login/logout);
+                                ?reset=1 shows the "password updated" notice
+src/app/admin/forgot-password/  email form -> resetPasswordForEmail
+src/app/admin/reset-password/   new-password form (needs the recovery
+                                session) + confirm/route.ts, where the
+                                email link lands and becomes a session
 src/app/admin/(dashboard)/      guarded layout, list, cases/new,
                                 cases/[id]/edit, cases/actions.ts
-src/components/admin/           LoginForm, CaseForm, FileUpload,
+src/components/admin/           AuthCard (shared frame + input/button
+                                classes), LoginForm, ForgotPasswordForm,
+                                ResetPasswordForm, CaseForm, FileUpload,
                                 DeleteCaseButton, CaseTable (drag-reorder)
 supabase/migrations/0001_cases.sql   table, RLS, buckets, storage policies
 supabase/migrations/0002_case_copy.sql   per-case copy: purchase_info,
@@ -186,7 +193,9 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Rendering is dynamic** (`export const dynamic = "force-dynamic"`) on `/`, `/cases`, `/cases/[slug]` and all admin pages: they read Supabase per request. No ISR is possible until an R2 incremental cache is configured on Cloudflare. Static assets (JS/CSS/fonts/SVG) are still served free from the edge.
 - **Public reads use the anonymous client** (`createPublicClient`, no cookies). RLS only exposes `published = true` rows to `anon`. In production a failed read logs and renders empty; in development it throws.
 - **Admin writes use the cookie-aware client** as the signed-in user. RLS grants `authenticated` full access. There is no service-role key anywhere and none is needed.
-- **Auth guard is two layers:** `src/proxy.ts` does an optimistic `getClaims()` (JWT verified locally, no DB call) and redirects; `admin/(dashboard)/layout.tsx` repeats it server-side. `/admin/login` sits outside the route group so it isn't guarded.
+- **Auth guard is two layers:** `src/proxy.ts` does an optimistic `getClaims()` (JWT verified locally, no DB call) and redirects; `admin/(dashboard)/layout.tsx` repeats it server-side. `/admin/login`, `/admin/forgot-password` and `/admin/reset-password/*` sit outside the route group and are listed in `isPublicAdminPath()` in the proxy so they work without a session.
+- **Password reset uses Supabase Auth's own mechanism**, no custom email code. `requestPasswordReset` (server action) calls `resetPasswordForEmail(email, { redirectTo: <origin>/admin/reset-password/confirm })` — the origin comes from the request so localhost and production each redirect to themselves. The confirm route accepts `?code=` (default `{{ .ConfirmationURL }}` template, PKCE) **and** `?token_hash=&type=recovery` (Supabase's SSR-recommended template, immune to link-prefetching mail scanners), turns it into a session cookie and redirects to the form. `updatePassword` requires ≥8 chars + match, calls `updateUser({ password })`, signs out, and lands on `/admin/login?reset=1`. The forgot form always shows the same "if that email is registered…" notice; failures only reach the server log.
+- **Reset-flow dashboard prerequisites:** every origin's `/admin/reset-password/confirm` must be in Authentication → URL Configuration → Redirect URLs, and the recovery email must actually be deliverable — Supabase's built-in sender only delivers to Supabase **organisation members' addresses** (2 emails/hour, no SLA); custom SMTP (Resend) needs a verified sending domain. See the notes in the "Auth email" section below.
 - **Sign-ups must be disabled in Supabase** (Authentication → Providers → Email → "Allow new users to sign up" OFF). RLS treats any `authenticated` user as the admin.
 - **File uploads go browser → Storage directly** (`FileUpload` uses the browser client + admin session). Nothing streams through the Worker, so there's no request-size ceiling to hit. Public bucket values are stored as public URLs; private bucket values as object paths.
 - **Gallery is a `text[]` column** (`gallery_urls`), not a `case_images` table — one row, one form, array order = display order. Revisit only if images need captions or per-image metadata.
@@ -195,6 +204,15 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Deleting a case removes its storage objects** (best-effort). Removing a file inside the form only detaches it; the object stays until the case is deleted — orphans are possible after abandoned edits.
 - **Metadata:** root layout sets `metadataBase` from `SITE.url` (`NEXT_PUBLIC_SITE_URL`, fallback to the workers.dev URL) and a `%s — Goyenda` title template — page titles must NOT append the suffix themselves. OG/Twitter defaults come from the layout; per-page `description` overrides are fine.
 - **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
+
+### Auth email (Supabase → admin inbox)
+
+Only one message type goes through Supabase's mailer: the admin password-recovery link. Two ways to deliver it:
+
+- **Built-in Supabase sender (current).** Zero config, free, but it only delivers to email addresses of the project's *organisation members*, is capped at 2 messages/hour and carries no delivery SLA. Fine while the admin login email is the same address that owns the Supabase project.
+- **Custom SMTP via Resend (switch once a domain is verified).** Authentication → Emails → SMTP Settings: host `smtp.resend.com`, port `465` (SSL) or `587`, user `resend`, password = a Resend API key, sender = an address on the verified domain. Resend's free tier is 3,000/month, 100/day. Without a verified domain Resend can only send to the Resend account owner's own address, which is the same trap as the built-in sender.
+
+Either way the code is identical — the choice lives entirely in the Supabase dashboard.
 
 Catalog behaviour worth knowing:
 

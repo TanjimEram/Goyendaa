@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AdminLoginPage() {
-  return <LoginForm />;
+/** `?reset=1` is set by the password-reset action after it signs out. */
+export default async function AdminLoginPage({ searchParams }: PageProps<"/admin/login">) {
+  const { reset } = await searchParams;
+  const notice =
+    reset === "1" ? "Password updated. Sign in with the new one." : undefined;
+  return <LoginForm notice={notice} />;
 }

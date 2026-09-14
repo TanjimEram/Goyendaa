@@ -4,6 +4,17 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 
 const LOGIN_PATH = "/admin/login";
 
+/** Admin routes that must work without a session: the sign-in page, the
+ *  forgot-password form, and the reset page + the route the recovery
+ *  email lands on. Everything else under /admin is guarded. */
+function isPublicAdminPath(pathname: string) {
+  return (
+    pathname === LOGIN_PATH ||
+    pathname === "/admin/forgot-password" ||
+    pathname.startsWith("/admin/reset-password")
+  );
+}
+
 /** Cookie that ties a browser to its open checkout reservations. */
 export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
 
@@ -16,7 +27,8 @@ export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
  * the very first render already sees it.
  *
  * /admin/*   — refreshes the Supabase session cookie and bounces
- * unauthenticated visitors to the login page. This is the optimistic check
+ * unauthenticated visitors to the login page (except the sign-in /
+ * forgot / reset pages, which are public by nature). This is the optimistic check
  * (JWT verified locally via getClaims, no database round-trip). The
  * dashboard layout repeats the check server-side, and RLS is the real wall.
  */
@@ -66,7 +78,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const onLoginPage = pathname === LOGIN_PATH;
 
-  if (!signedIn && !onLoginPage) {
+  if (!signedIn && !isPublicAdminPath(pathname)) {
     const login = request.nextUrl.clone();
     login.pathname = LOGIN_PATH;
     login.search = "";
