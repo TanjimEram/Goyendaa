@@ -19,7 +19,10 @@ export const SITE = {
   legalUpdated: "14 September 2026",
   /** The entity named in the terms. Sole trader until a licence exists. */
   operator: "Goyenda, an individual seller based in Dhaka, Bangladesh",
-  /** Hours the download link stays valid after purchase. Mirrors the
-   *  success-page copy; the real signed-URL TTL must match this. */
+  /** Days the download stays available after approval. Enforced by the
+   *  download route and stated on terms, FAQ and emails. */
   downloadWindowDays: 7,
+  /** Plain-language promise for how fast a payment is checked. Shown on the
+   *  checkout page, the pending page and the buyer's receipt email. */
+  confirmationWindow: "usually within a few hours, between 9 am and 11 pm Dhaka time",
 } as const;

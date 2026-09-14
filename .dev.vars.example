@@ -1,0 +1,23 @@
+# Copy to .dev.vars (gitignored). Read by `npm run preview` (wrangler) and,
+# through the OpenNext dev bridge, by `npm run dev`. These are SECRETS or
+# runtime settings — never NEXT_PUBLIC_, never in wrangler.jsonc.
+#
+# On Cloudflare: Worker → Settings → Variables and Secrets → add each as
+# type "Secret" (encrypted). They are runtime values, not build variables.
+
+# Supabase → Project Settings → API → service_role (secret). Bypasses RLS;
+# used only in server code for order creation/lookup and signed downloads.
+SUPABASE_SERVICE_ROLE_KEY=
+# Your personal bKash number, exactly as buyers should type it, e.g. 01712345678
+BKASH_NUMBER=
+# Where new-order notifications go.
+ADMIN_EMAIL=
+
+# Resend → API Keys. Without it, sends are skipped and logged (fine for local
+# checkout testing).
+RESEND_API_KEY=
+
+# Sender. Until a domain is verified in Resend this MUST be
+# onboarding@resend.dev, and Resend will only deliver to the account
+# owner's own address. Verify a domain before real buyers.
+EMAIL_FROM=Goyenda <onboarding@resend.dev>

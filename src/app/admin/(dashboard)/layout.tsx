@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/admin/login/actions";
+import { getPendingCountAdmin } from "@/lib/orders-data";
 import { createClient } from "@/lib/supabase/server";
 
 // Every admin page reads live data and depends on the session cookie.
@@ -22,6 +23,8 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   if (!data?.claims) redirect("/admin/login");
 
   const email = typeof data.claims.email === "string" ? data.claims.email : "";
+  // Badge for the nav. Swallowed if the orders table isn't migrated yet.
+  const pending = await getPendingCountAdmin().catch(() => 0);
 
   return (
     <div className="flex min-h-svh flex-col bg-noir text-cream">
@@ -40,6 +43,12 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
             <nav className="hidden items-center gap-5 font-mono text-[10px] uppercase tracking-[0.18em] text-ash sm:flex">
               <Link href="/admin" className="hover:text-cream">
                 Cases
+              </Link>
+              <Link href="/admin/orders" className="flex items-center gap-2 hover:text-cream">
+                Orders
+                {pending > 0 && (
+                  <span className="bg-blood px-1.5 py-0.5 text-[9px] text-cream">{pending}</span>
+                )}
               </Link>
               <Link href="/" className="hover:text-cream" target="_blank">
                 View site &nearr;

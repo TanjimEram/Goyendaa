@@ -4,15 +4,38 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 
 const LOGIN_PATH = "/admin/login";
 
+/** Cookie that ties a browser to its open checkout reservations. */
+export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
+
 /**
- * Guards /admin. Refreshes the Supabase session cookie on every admin
- * request and bounces unauthenticated visitors to the login page.
+ * Two jobs:
  *
- * This is the optimistic check (JWT verified locally via getClaims, no
- * database round-trip). The dashboard layout repeats the check server-side,
- * and RLS is the real wall — so a bypass here leaks nothing.
+ * /checkout/* — plants a random checkout-session cookie if the browser has
+ * none, so the checkout page can reserve ONE order code per session+case
+ * and a refresh doesn't mint a new one. Forwarded on the request too, so
+ * the very first render already sees it.
+ *
+ * /admin/*   — refreshes the Supabase session cookie and bounces
+ * unauthenticated visitors to the login page. This is the optimistic check
+ * (JWT verified locally via getClaims, no database round-trip). The
+ * dashboard layout repeats the check server-side, and RLS is the real wall.
  */
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/checkout")) {
+    if (request.cookies.has(CHECKOUT_SESSION_COOKIE)) return NextResponse.next();
+    const id = crypto.randomUUID();
+    request.cookies.set(CHECKOUT_SESSION_COOKIE, id);
+    const res = NextResponse.next({ request });
+    res.cookies.set(CHECKOUT_SESSION_COOKIE, id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return res;
+  }
+
   const { url, key } = getSupabaseEnv();
 
   let response = NextResponse.next({ request });
@@ -61,5 +84,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/checkout/:path*"],
 };

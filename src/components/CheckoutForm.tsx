@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { startCheckout, type CheckoutState } from "@/app/checkout/[slug]/actions";
-import { formatTaka } from "@/lib/cases";
-import { PAYMENT_METHODS, PAYMENT_METHOD_ORDER } from "@/lib/payments";
+import { submitManualPayment, type CheckoutState } from "@/app/checkout/[slug]/actions";
+import { CopyButton } from "@/components/CopyButton";
 
 const INPUT =
   "mt-2 w-full border border-noir-line bg-noir-raised px-4 py-3 font-sans text-base text-cream outline-none transition-colors duration-300 ease-noir placeholder:text-ash/50 focus:border-brass";
@@ -19,61 +18,50 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
+/**
+ * Step 2 of the manual bKash checkout: the buyer has (hopefully) sent the
+ * money and now hands us the details we need to find it in the bKash app.
+ */
 export function CheckoutForm({
+  orderId,
+  orderCode,
   slug,
-  title,
+  bkashNumber,
   amount,
-  solutionDelayHours,
 }: {
+  orderId: string;
+  orderCode: string;
   slug: string;
-  title: string;
+  bkashNumber: string;
   amount: number;
-  solutionDelayHours: number;
 }) {
   const [state, action, pending] = useActionState<CheckoutState, FormData>(
-    startCheckout,
+    submitManualPayment,
     {},
   );
   const f = state.fields ?? {};
-
-  if (state.unavailable) {
-    return (
-      <div className="relative border border-brass bg-noir-raised p-6 shadow-stamp sm:p-8">
-        <span
-          aria-hidden
-          className="absolute -top-4 right-5 rotate-[6deg] border-[3px] border-blood px-3 py-1 font-mono text-sm font-semibold tracking-[0.14em] text-blood"
-        >
-          NOT YET
-        </span>
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
-          Checkout
-        </p>
-        <h2 className="mt-3 font-display text-2xl font-semibold text-cream">
-          Payments aren&rsquo;t open yet.
-        </h2>
-        <p className="mt-4 text-sm leading-[1.75] text-ash">
-          Everything else is ready &mdash; the file, the delay, the delivery.
-          We&rsquo;re finishing the bKash and Nagad connection. When it opens,
-          this page will take you straight to payment, the case PDF will
-          download the moment it clears, and the solution will follow{" "}
-          {solutionDelayHours} hour{solutionDelayHours === 1 ? "" : "s"} later
-          to <span className="text-cream">{state.email}</span>.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-4 font-mono text-[11px] uppercase tracking-[0.16em]">
-          <Link href={`/cases/${slug}`} className="text-ash hover:text-brass">
-            &larr; Back to {title}
-          </Link>
-          <Link href="/cases" className="text-ash hover:text-brass">
-            The Casebook
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const v = state.values ?? {};
 
   return (
     <form action={action} className="flex flex-col gap-7">
+      <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="slug" value={slug} />
+
+      <div>
+        <label htmlFor="name" className={LABEL}>
+          Your name
+        </label>
+        <input
+          id="name"
+          name="name"
+          autoComplete="name"
+          required
+          maxLength={80}
+          defaultValue={v.name ?? ""}
+          className={INPUT}
+        />
+        <FieldError message={f.name} />
+      </div>
 
       <div>
         <label htmlFor="email" className={LABEL}>
@@ -86,7 +74,7 @@ export function CheckoutForm({
           inputMode="email"
           autoComplete="email"
           required
-          defaultValue={state.email ?? ""}
+          defaultValue={v.email ?? ""}
           placeholder="you@example.com"
           className={INPUT}
         />
@@ -94,60 +82,58 @@ export function CheckoutForm({
           <FieldError message={f.email} />
         ) : (
           <p className="mt-1.5 text-xs text-ash/80">
-            The case file link and, later, the solution go here. No account
-            needed.
+            The download link and, later, the solution go here. Check it twice.
           </p>
         )}
       </div>
 
-      <fieldset>
-        <legend className={LABEL}>Pay with</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-          {PAYMENT_METHOD_ORDER.map((m, i) => (
-            <label
-              key={m}
-              className="flex cursor-pointer items-start gap-3 border border-noir-line bg-noir-raised px-4 py-3 transition-colors has-[:checked]:border-brass"
-            >
-              <input
-                type="radio"
-                name="method"
-                value={m}
-                defaultChecked={i === 0}
-                className="mt-1 accent-[var(--color-brass)]"
-              />
-              <span>
-                <span className="block font-mono text-[11px] uppercase tracking-[0.16em] text-cream">
-                  {PAYMENT_METHODS[m].label}
-                </span>
-                <span className="block text-xs text-ash">{PAYMENT_METHODS[m].hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-        <FieldError message={f.method} />
-      </fieldset>
+      <div>
+        <label htmlFor="trxid" className={LABEL}>
+          bKash Transaction ID
+        </label>
+        <input
+          id="trxid"
+          name="trxid"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          required
+          maxLength={20}
+          defaultValue={v.trxid ?? ""}
+          placeholder="e.g. BJK7H2X9QT"
+          className={`${INPUT} font-mono uppercase tracking-[0.12em]`}
+        />
+        {f.trxid ? (
+          <FieldError message={f.trxid} />
+        ) : (
+          <p className="mt-1.5 text-xs text-ash/80">
+            From the bKash confirmation SMS or the app&rsquo;s transaction
+            history &mdash; labelled &ldquo;TrxID&rdquo;.
+          </p>
+        )}
+      </div>
 
       <div>
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            name="terms"
-            className="mt-1 accent-[var(--color-brass)]"
-          />
-          <span className="text-xs leading-[1.7] text-ash">
-            I understand this is a digital file with no refunds once downloaded,
-            that the solution arrives by email on a delay, and that every case is
-            a work of fiction.{" "}
-            <Link href="/terms" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
-              Terms
-            </Link>{" "}
-            &middot;{" "}
-            <Link href="/refunds" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
-              Refunds
-            </Link>
-          </span>
+        <label htmlFor="code" className={LABEL}>
+          Order code
         </label>
-        <FieldError message={f.terms} />
+        <input
+          id="code"
+          name="code"
+          autoComplete="off"
+          required
+          defaultValue={v.code ?? ""}
+          placeholder={orderCode}
+          className={`${INPUT} font-mono uppercase tracking-[0.12em]`}
+        />
+        {f.code ? (
+          <FieldError message={f.code} />
+        ) : (
+          <p className="mt-1.5 text-xs text-ash/80">
+            Re-type <span className="font-mono text-cream">{orderCode}</span>{" "}
+            to confirm this is the payment you just sent.
+          </p>
+        )}
       </div>
 
       {state.error && (
@@ -161,7 +147,7 @@ export function CheckoutForm({
         disabled={pending}
         className="group inline-flex items-center justify-center gap-3 bg-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending ? "One moment…" : `Pay ${formatTaka(amount)}`}
+        {pending ? "Submitting…" : "I've sent the money"}
         {!pending && (
           <span aria-hidden className="transition-transform duration-300 ease-noir group-hover:translate-x-1">
             &rarr;
@@ -169,8 +155,19 @@ export function CheckoutForm({
         )}
       </button>
 
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
-        Secure payment via a Bangladesh aggregator &middot; ৳ only
+      <p className="text-xs leading-[1.7] text-ash">
+        Haven&rsquo;t sent it yet? Send ৳ {amount} to{" "}
+        <span className="font-mono text-cream">{bkashNumber}</span>{" "}
+        <CopyButton value={bkashNumber} label="copy" /> first, then come back.
+        By submitting you accept the{" "}
+        <Link href="/terms" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
+          terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/refunds" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
+          refund policy
+        </Link>
+        .
       </p>
     </form>
   );

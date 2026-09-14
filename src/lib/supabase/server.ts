@@ -43,3 +43,17 @@ export function createPublicClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * Service-role client. Bypasses RLS — use ONLY in server code that has
+ * already decided what it's allowed to do (order creation from the public
+ * checkout, signed download URLs for a verified buyer). Never expose the key.
+ */
+export async function createServiceClient() {
+  const { url } = getSupabaseEnv();
+  const { requireEnv } = await import("@/lib/env");
+  const key = await requireEnv("SUPABASE_SERVICE_ROLE_KEY");
+  return createBareClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}

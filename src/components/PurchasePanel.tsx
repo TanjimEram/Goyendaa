@@ -20,7 +20,7 @@ export function buyingLines(caseFile: CaseFile): string[] {
   ];
 }
 
-/** Where "Buy case file" goes. Checkout is not built yet; this 404s. */
+/** Where "Buy case file" goes — the manual bKash checkout. */
 export function checkoutHref(caseFile: CaseFile) {
   return `/checkout/${caseFile.slug}`;
 }
