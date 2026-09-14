@@ -28,9 +28,9 @@ export async function generateMetadata({
 }: PageProps<"/cases/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const caseFile = await getPublishedCase(slug);
-  if (!caseFile) return { title: "Goyenda" };
+  if (!caseFile) return { title: "Case not found" };
   return {
-    title: `${caseFile.title} — Goyenda`,
+    title: `${caseFile.title}`,
     description: caseFile.premise,
   };
 }

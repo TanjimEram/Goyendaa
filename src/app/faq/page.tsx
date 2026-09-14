@@ -5,7 +5,7 @@ import { RANKS, RANK_ORDER } from "@/lib/cases";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "FAQ — Goyenda",
+  title: "FAQ",
   description: "How buying, printing and solving a Goyenda case file works.",
 };
 

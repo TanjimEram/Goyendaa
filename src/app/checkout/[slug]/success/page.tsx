@@ -13,7 +13,7 @@ import { PAYMENT_METHODS } from "@/lib/payments";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Case file secured — Goyenda",
+  title: "Case file secured",
   robots: { index: false, follow: false },
 };
 

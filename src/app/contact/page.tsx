@@ -4,7 +4,7 @@ import { TextPage } from "@/components/TextPage";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Contact — Goyenda",
+  title: "Contact",
   description: "How to reach Goyenda about an order, a case, or anything else.",
 };
 

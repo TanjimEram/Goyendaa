@@ -18,7 +18,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const caseFile = await getPublishedCase(slug);
   return {
-    title: caseFile ? `Checkout — ${caseFile.title} — Goyenda` : "Checkout — Goyenda",
+    title: caseFile ? `Checkout — ${caseFile.title}` : "Checkout",
     robots: { index: false, follow: false },
   };
 }

@@ -157,8 +157,13 @@ src/app/{terms,privacy,refunds}/  legal pages — DRAFTS, see note in terms
 src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
 src/components/TextPage.tsx     frame + <Section> for prose pages
 src/components/MobileNav.tsx    hamburger panel below md (client island)
-src/lib/site.ts                 SITE: contact email, legal date, operator,
-                                download window — change facts here
+src/lib/site.ts                 SITE: url (metadataBase), contact email,
+                                legal date, operator, download window
+src/app/{favicon.ico,icon.png,apple-icon.png,opengraph-image.png,
+         opengraph-image.alt.txt}   brand assets via Next file conventions;
+                                originals are 1254² / 1536×1024 — keep the
+                                masters outside the repo, regenerate with
+                                sharp (ICO entries must be RGBA PNGs)
 src/proxy.ts                    guards /admin/*, refreshes session cookie
 src/app/admin/login/            server page + actions (login/logout)
 src/app/admin/(dashboard)/      guarded layout, list, cases/new,
@@ -188,6 +193,7 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **`case_number` (identity) drives "CASE 007"; `position` drives ordering.** Reordering never renumbers a file.
 - **Reordering** is client-side in `CaseTable` (native HTML5 drag-and-drop plus ▲/▼ buttons for touch/keyboard) and only persists on "Save order", which calls `reorderCases(ids)` → the `reorder_cases` RPC: one statement sets `position = 1..n`. `CaseTable` is keyed on the id list so a server refresh after create/delete resets its local state.
 - **Deleting a case removes its storage objects** (best-effort). Removing a file inside the form only detaches it; the object stays until the case is deleted — orphans are possible after abandoned edits.
+- **Metadata:** root layout sets `metadataBase` from `SITE.url` (`NEXT_PUBLIC_SITE_URL`, fallback to the workers.dev URL) and a `%s — Goyenda` title template — page titles must NOT append the suffix themselves. OG/Twitter defaults come from the layout; per-page `description` overrides are fine.
 - **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
 
 Catalog behaviour worth knowing:
@@ -225,7 +231,6 @@ Known placeholders, to be replaced:
 - **`SITE.contactEmail` is a placeholder** (`hello@goyenda.com`) — it appears on contact, FAQ, legal and success pages. Set the real one before launch.
 - **"7-day download window"** (`SITE.downloadWindowDays`) is a policy assumption stated on terms, FAQ and the success page. The real signed-URL TTL must match it.
 - **The only `href="#"` left** is the mock download button on the success page, by design.
-- **`src/app/favicon.ico` is still the Next.js default.**
 
 ---
 

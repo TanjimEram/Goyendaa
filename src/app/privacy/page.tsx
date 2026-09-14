@@ -3,7 +3,7 @@ import { Section, TextPage } from "@/components/TextPage";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Privacy policy — Goyenda",
+  title: "Privacy policy",
   description: "What Goyenda collects, why, and who sees it.",
 };
 

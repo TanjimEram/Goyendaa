@@ -4,7 +4,7 @@ import { Section, TextPage } from "@/components/TextPage";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Refund policy — Goyenda",
+  title: "Refund policy",
   description: "When Goyenda refunds a purchase, and when it can't.",
 };
 

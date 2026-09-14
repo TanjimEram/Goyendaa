@@ -8,7 +8,7 @@ import { getPublishedCases } from "@/lib/cases-data";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "The Casebook — Goyenda",
+  title: "The Casebook",
   description:
     "Every open Goyenda case file. Filter by difficulty rank, pick a case, print the evidence and work it.",
 };
