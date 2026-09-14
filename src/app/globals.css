@@ -138,3 +138,38 @@
   background-size: 28px 28px;
   background-position: 14px 14px;
 }
+
+/* Prose on text pages (terms, FAQ …). Kept minimal: links, emphasis, lists. */
+.prose-noir a {
+  color: var(--color-cream);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: var(--color-brass-dim);
+}
+.prose-noir a:hover {
+  color: var(--color-brass);
+}
+.prose-noir strong {
+  color: var(--color-cream);
+  font-weight: 500;
+}
+.prose-noir ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-left: 0;
+}
+.prose-noir ul li {
+  position: relative;
+  padding-left: 1.1rem;
+}
+.prose-noir ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.75em;
+  width: 4px;
+  height: 4px;
+  background: var(--color-brass);
+}

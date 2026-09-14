@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { RANKS, RANK_ORDER } from "@/lib/cases";
 
-/* "#" hrefs are placeholders until those routes exist. */
 const FOOTER_COLUMNS = [
   {
     heading: "Cases",
@@ -18,17 +17,17 @@ const FOOTER_COLUMNS = [
     links: [
       { label: "About", href: "/#about" },
       { label: "How it works", href: "/#how-it-works" },
-      { label: "Contact", href: "#" },
-      { label: "FAQ", href: "#" },
+      { label: "FAQ", href: "/faq" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
     heading: "Legal",
     links: [
-      { label: "Terms of service", href: "#" },
-      { label: "Privacy policy", href: "#" },
-      { label: "Refund policy", href: "#" },
-      { label: "Licence & fair use", href: "#" },
+      { label: "Terms of service", href: "/terms" },
+      { label: "Privacy policy", href: "/privacy" },
+      { label: "Refund policy", href: "/refunds" },
+      { label: "Licence & fair use", href: "/terms#licence" },
     ],
   },
 ];

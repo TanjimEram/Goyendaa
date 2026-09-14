@@ -138,9 +138,13 @@ export function CheckoutForm({
             I understand this is a digital file with no refunds once downloaded,
             that the solution arrives by email on a delay, and that every case is
             a work of fiction.{" "}
-            <a href="#" className="text-cream underline underline-offset-4 hover:text-brass">
+            <Link href="/terms" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
               Terms
-            </a>
+            </Link>{" "}
+            &middot;{" "}
+            <Link href="/refunds" target="_blank" className="text-cream underline underline-offset-4 hover:text-brass">
+              Refunds
+            </Link>
           </span>
         </label>
         <FieldError message={f.terms} />

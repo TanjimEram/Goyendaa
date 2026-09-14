@@ -153,6 +153,12 @@ src/lib/orders.ts               Order type (future orders row), mockOrder,
 src/components/SolutionCountdown.tsx  live "in 2h 41m" via useSyncExternalStore
 src/components/CheckoutForm.tsx client form → "not open yet" panel
 src/app/not-found.tsx           styled 404 ("This trail's gone cold.")
+src/app/{terms,privacy,refunds}/  legal pages — DRAFTS, see note in terms
+src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
+src/components/TextPage.tsx     frame + <Section> for prose pages
+src/components/MobileNav.tsx    hamburger panel below md (client island)
+src/lib/site.ts                 SITE: contact email, legal date, operator,
+                                download window — change facts here
 src/proxy.ts                    guards /admin/*, refreshes session cookie
 src/app/admin/login/            server page + actions (login/logout)
 src/app/admin/(dashboard)/      guarded layout, list, cases/new,
@@ -196,7 +202,7 @@ Checkout behaviour worth knowing:
 - **Nothing is persisted yet.** No `orders` table; that lands with the real provider + webhook. `Order` in `src/lib/orders.ts` is the intended row shape — the success page already renders from it, so wiring real data means replacing `mockOrder()` with a lookup by `?order=` ref and deleting the preview strip.
 - **Solution timing is computed from `paidAt`**, never from download time (`solutionTimeFor`). Times display in Asia/Dhaka.
 - **Email is the delivery address** for both the case PDF and the delayed solution. The form says so.
-- **Terms link is `#`** — no terms page yet.
+- **Checkout links to `/terms` and `/refunds`** (new tab) from the consent line.
 
 Case detail behaviour worth knowing:
 
@@ -215,8 +221,10 @@ Known placeholders, to be replaced:
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
 - **Checkout can't take money** — placeholder provider only. Success page + orders table + real aggregator are the next steps.
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
-- **Footer "Contact / FAQ / Legal" links are `#`.** Everything else in header, hero and footer is a real route or on-page anchor.
-- **No mobile nav menu** — the header nav collapses to the wordmark + CTA below `md`. Fine while every link is an on-page anchor; needs a real menu once routes exist.
+- **Legal pages are drafts.** Plain-language terms/privacy/refunds written for a sole-trader digital-goods seller in BD. Not legal advice — have them read before launch. `SITE.legalUpdated` must move when wording changes. Privacy §2 names the provider categories generically; fill in once the aggregator and email service are chosen.
+- **`SITE.contactEmail` is a placeholder** (`hello@goyenda.com`) — it appears on contact, FAQ, legal and success pages. Set the real one before launch.
+- **"7-day download window"** (`SITE.downloadWindowDays`) is a policy assumption stated on terms, FAQ and the success page. The real signed-URL TTL must match it.
+- **The only `href="#"` left** is the mock download button on the success page, by design.
 - **`src/app/favicon.ico` is still the Next.js default.**
 
 ---

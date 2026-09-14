@@ -196,8 +196,11 @@ export default async function SuccessPage({ params }: PageProps<"/checkout/[slug
             <div className="flex flex-col justify-end gap-3 text-sm leading-[1.7] text-ash">
               <p>
                 <span className="text-cream">Didn&rsquo;t get the email?</span>{" "}
-                Check spam, then wait ten minutes. If it&rsquo;s still missing,
-                reply to any Goyenda email with your order number.
+                Check spam, then wait ten minutes. If it&rsquo;s still missing,{" "}
+                <Link href="/contact" className="text-cream underline underline-offset-4 hover:text-brass">
+                  write to us
+                </Link>{" "}
+                with your order number.
               </p>
               <p>
                 <span className="text-cream">Wrong address?</span> Tell us
