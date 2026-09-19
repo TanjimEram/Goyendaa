@@ -6,6 +6,10 @@ Printable detective case files. Buy a case, download and print the evidence pack
 
 Every case is fictional. See the editorial rule in [`CLAUDE.md`](./CLAUDE.md).
 
+## Watch it work
+
+[![Goyenda — 21-second intro. Click to play.](docs/media/intro.jpg)](docs/media/intro.mp4)
+
 ## Stack
 
 Next.js 16 (App Router, TypeScript) · Tailwind CSS v4 · Supabase · Resend · Cloudflare Workers (via OpenNext)
