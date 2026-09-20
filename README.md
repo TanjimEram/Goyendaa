@@ -8,7 +8,8 @@ Every case is fictional. See the editorial rule in [`CLAUDE.md`](./CLAUDE.md).
 
 ## Watch it work
 
-## Watch it work
+[![Goyenda — 21-second intro. Click to play.](docs/media/intro.jpg)](https://raw.githubusercontent.com/TanjimEram/Goyendaa/main/docs/media/intro.mp4)
+
 
 <video controls width="720">
   <source src="https://raw.githubusercontent.com/TanjimEram/Goyendaa/main/docs/media/intro.mp4" type="video/mp4">
