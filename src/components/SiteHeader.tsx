@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { MobileNav } from "@/components/MobileNav";
 
@@ -15,7 +16,15 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-noir-line/60 bg-noir/75 backdrop-blur-md">
       <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:h-18 sm:px-8">
         {/* Wordmark */}
-        <Link href="/" className="group flex items-baseline gap-2.5">
+        <Link href="/" className="group flex items-center gap-3">
+          <Image
+            src="/logo-mark.png"
+            alt=""
+            width={255}
+            height={271}
+            priority
+            className="h-8 w-auto transition-opacity duration-300 ease-noir group-hover:opacity-80 sm:h-9"
+          />
           <span className="font-display text-2xl font-semibold tracking-[0.14em] text-cream transition-colors duration-300 ease-noir group-hover:text-brass sm:text-[26px]">
             GOYENDA
           </span>

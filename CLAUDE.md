@@ -185,6 +185,8 @@ supabase/migrations/0002_case_copy.sql   per-case copy: purchase_info,
 supabase/migrations/0003_reorder.sql   reorder_cases(uuid[]) RPC
 supabase/seed.sql               the eight placeholder cases
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
+public/logo-mark.png            transparent, trimmed brand mark (from icon.png)
+                                used in SiteHeader next to the wordmark
 wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)
 open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 ```
