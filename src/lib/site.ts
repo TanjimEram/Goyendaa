@@ -11,7 +11,7 @@ export const SITE = {
    * Set NEXT_PUBLIC_SITE_URL (build-time) once a custom domain exists;
    * the Workers URL is the fallback so link previews work from day one.
    */
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://goyendaa.eramtanjim.workers.dev",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://goyenda.goyenda.workers.dev",
   tagline: "Printable detective case files",
   /** Where buyers write. Also the reply-to for transactional email later. */
   contactEmail: "hello@goyenda.com",

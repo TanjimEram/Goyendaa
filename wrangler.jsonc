@@ -2,12 +2,11 @@
 // Docs: https://opennext.js.org/cloudflare  ·  https://developers.cloudflare.com/workers/wrangler/configuration/
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Must match the Worker's name in the Cloudflare dashboard exactly. The
-  // Worker was created from the GitHub repo "Goyendaa", so it got that name;
-  // Workers can't be renamed after creation. If you ever want the shorter
-  // goyenda.<subdomain>.workers.dev URL, delete and recreate the Worker as
-  // "goyenda" and change this line to match.
-  "name": "goyendaa",
+  // Must match the Worker's name in the Cloudflare dashboard exactly, or
+  // wrangler warns and overrides it on every deploy. The live URL is
+  // https://<name>.<account-subdomain>.workers.dev; the subdomain is an
+  // account-level setting (Workers & Pages -> "Your subdomain"), not this file.
+  "name": "goyenda",
   "main": ".open-next/worker.js",
 
   // nodejs_compat is required by OpenNext. The date pins workerd behaviour;

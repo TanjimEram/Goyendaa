@@ -47,3 +47,6 @@ next-env.d.ts
 
 # claude code (launch.json is shared config and stays tracked)
 .claude/settings.local.json
+
+# /brag video output (rendered mp4 + hyperframes project)
+brag-output/
