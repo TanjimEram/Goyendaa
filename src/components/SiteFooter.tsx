@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RANKS, RANK_ORDER } from "@/lib/cases";
+import { SITE } from "@/lib/site";
 
 const FOOTER_COLUMNS = [
   {
@@ -53,6 +54,47 @@ export function SiteFooter() {
               Printable detective case files. Fictional cases, real
               investigative work &mdash; made in Dhaka.
             </p>
+
+            {/* Contact. One person, one inbox, one number. */}
+            <dl className="mt-7 flex flex-col gap-3 text-sm">
+              <div className="flex flex-col gap-1">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+                  Email
+                </dt>
+                <dd>
+                  <a
+                    href={`mailto:${SITE.contactEmail}`}
+                    className="break-all text-ash transition-colors duration-300 ease-noir hover:text-cream"
+                  >
+                    {SITE.contactEmail}
+                  </a>
+                </dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+                  Phone &middot; WhatsApp
+                </dt>
+                <dd className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <a
+                    href={`tel:+${SITE.contactPhoneIntl}`}
+                    className="text-ash transition-colors duration-300 ease-noir hover:text-cream"
+                  >
+                    {SITE.contactPhone}
+                  </a>
+                  <a
+                    href={`https://wa.me/${SITE.contactPhoneIntl}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-[10px] uppercase tracking-[0.16em] text-brass-dim transition-colors duration-300 ease-noir hover:text-brass"
+                  >
+                    WhatsApp ↗
+                  </a>
+                </dd>
+                <dd className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash/80">
+                  {SITE.contactHours}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           {/* Link columns */}
@@ -83,8 +125,8 @@ export function SiteFooter() {
             &copy; {year} Goyenda &middot; All cases are works of fiction
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
-            Payments coming soon:{" "}
-            <span className="text-brass-dim">bKash &middot; Nagad &middot; Card</span>
+            Pay with <span className="text-brass-dim">bKash</span> &middot; Send
+            Money, confirmed by hand
           </p>
         </div>
       </div>

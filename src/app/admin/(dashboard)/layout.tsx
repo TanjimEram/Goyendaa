@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
                 )}
               </Link>
               <Link href="/" className="hover:text-cream" target="_blank">
-                View site &nearr;
+                View site ↗
               </Link>
             </nav>
           </div>

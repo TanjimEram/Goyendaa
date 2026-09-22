@@ -1,8 +1,5 @@
 /**
  * Site-wide facts used in copy. One place to change them.
- *
- * TODO(owner): replace the contact email before launch. It's referenced on
- * /contact, /faq, the legal pages and the success page.
  */
 export const SITE = {
   name: "Goyenda",
@@ -13,8 +10,14 @@ export const SITE = {
    */
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://goyenda.goyenda.workers.dev",
   tagline: "Printable detective case files",
-  /** Where buyers write. Also the reply-to for transactional email later. */
-  contactEmail: "hello@goyenda.com",
+  /** Where buyers write. Also the reply-to on every transactional email. */
+  contactEmail: "goyendaaa@gmail.com",
+  /** Shown in the footer and on /contact. Same number buyers send money to. */
+  contactPhone: "01972644744",
+  /** WhatsApp uses the international form, no spaces or +. */
+  contactPhoneIntl: "8801972644744",
+  /** When a human actually answers the phone. */
+  contactHours: "10 am \u2013 10 pm, Dhaka time",
   /** Shown on the legal pages. Bump when the wording changes. */
   legalUpdated: "14 September 2026",
   /** The entity named in the terms. Sole trader until a licence exists. */

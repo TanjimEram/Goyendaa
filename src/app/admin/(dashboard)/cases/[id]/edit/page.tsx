@@ -48,17 +48,17 @@ export default async function EditCasePage({ params }: PageProps<"/admin/cases/[
               target="_blank"
               className="text-ash hover:text-cream"
             >
-              View live &nearr;
+              View live ↗
             </Link>
           )}
           {caseRow.case_pdf_path && links[caseRow.case_pdf_path] && (
             <a href={links[caseRow.case_pdf_path]} target="_blank" rel="noreferrer" className="text-ash hover:text-cream">
-              Open case PDF &nearr;
+              Open case PDF ↗
             </a>
           )}
           {caseRow.solution_pdf_path && links[caseRow.solution_pdf_path] && (
             <a href={links[caseRow.solution_pdf_path]} target="_blank" rel="noreferrer" className="text-ash hover:text-cream">
-              Open solution PDF &nearr;
+              Open solution PDF ↗
             </a>
           )}
         </div>

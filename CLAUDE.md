@@ -169,8 +169,9 @@ src/app/{terms,privacy,refunds}/  legal pages — DRAFTS, see note in terms
 src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
 src/components/TextPage.tsx     frame + <Section> for prose pages
 src/components/MobileNav.tsx    hamburger panel below md (client island)
-src/lib/site.ts                 SITE: url (metadataBase), contact email,
-                                legal date, operator, download window
+src/lib/site.ts                 SITE: url (metadataBase), contact email /
+                                phone / hours, legal date, operator,
+                                download + confirmation windows
 src/app/{favicon.ico,icon.png,apple-icon.png,opengraph-image.png,
          opengraph-image.alt.txt}   brand assets via Next file conventions;
                                 originals are 1254² / 1536×1024 — keep the
@@ -272,8 +273,8 @@ Known placeholders, to be replaced:
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
 - **No case PDFs are uploaded yet.** Until a case has `case_pdf_path`, Approve refuses; until it has `solution_pdf_path`, the solution job fails and alerts the admin. Upload both together.
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
+- **JSX does not decode every HTML entity.** `&nearr;` rendered literally as text; common ones (`&mdash;`, `&rsquo;`, `&rarr;`, `&middot;`) are fine. Use the character itself (↗) for anything unusual.
 - **Legal pages are drafts.** Plain-language terms/privacy/refunds written for a sole-trader digital-goods seller in BD. Not legal advice — have them read before launch. `SITE.legalUpdated` must move when wording changes. Privacy §2 still names provider categories generically; it can now say bKash (manual) and Resend by name.
-- **`SITE.contactEmail` is a placeholder** (`hello@goyenda.com`) — it appears on contact, FAQ, the legal pages, the order page and every email's reply-to. Set the real one before launch.
 - **The 7-day download window** (`SITE.downloadWindowDays`) is enforced by `/orders/[token]/download` (410 once past it) and stated on terms, FAQ and in the approval email. The *solution* link deliberately has no window.
 
 ---

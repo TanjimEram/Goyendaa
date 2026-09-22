@@ -41,20 +41,48 @@ export default function ContactPage() {
         </p>
       }
     >
-      <div className="border border-brass bg-noir-raised p-6 shadow-stamp sm:p-8">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
-          Email
-        </p>
-        <a
-          href={`mailto:${SITE.contactEmail}`}
-          className="mt-3 block break-all font-display text-2xl font-semibold text-cream underline decoration-brass-dim underline-offset-8 transition-colors hover:text-brass sm:text-3xl"
-        >
-          {SITE.contactEmail}
-        </a>
-        <p className="mt-4 text-sm leading-[1.7] text-ash">
-          Replying to any Goyenda email &mdash; your download link, your
-          solution &mdash; also reaches us.
-        </p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="border border-brass bg-noir-raised p-6 shadow-stamp sm:p-8">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+            Email
+          </p>
+          <a
+            href={`mailto:${SITE.contactEmail}`}
+            className="mt-3 block break-all font-display text-lg font-semibold text-cream underline decoration-brass-dim underline-offset-8 transition-colors hover:text-brass sm:text-xl lg:text-[1.4rem]"
+          >
+            {SITE.contactEmail}
+          </a>
+          <p className="mt-4 text-sm leading-[1.7] text-ash">
+            Best for anything about an order &mdash; quote your order code.
+            Replying to any Goyenda email &mdash; your download link, your
+            solution &mdash; also reaches us.
+          </p>
+        </div>
+
+        <div className="border border-noir-line bg-noir-raised p-6 sm:p-8">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+            Phone &middot; WhatsApp
+          </p>
+          <a
+            href={`tel:+${SITE.contactPhoneIntl}`}
+            className="mt-3 block font-display text-2xl font-semibold text-cream underline decoration-brass-dim underline-offset-8 transition-colors hover:text-brass sm:text-3xl"
+          >
+            {SITE.contactPhone}
+          </a>
+          <p className="mt-4 text-sm leading-[1.7] text-ash">
+            {SITE.contactHours}. This is the same number you send money to, so
+            it&rsquo;s the fastest way to sort out a payment that hasn&rsquo;t
+            been confirmed.
+          </p>
+          <a
+            href={`https://wa.me/${SITE.contactPhoneIntl}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-5 inline-flex items-center gap-3 border border-brass px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-brass transition-all duration-300 ease-noir hover:bg-brass hover:text-noir"
+          >
+            Message on WhatsApp <span aria-hidden>↗</span>
+          </a>
+        </div>
       </div>
 
       <ul className="mt-10 grid gap-px border border-noir-line bg-noir-line sm:grid-cols-2">
