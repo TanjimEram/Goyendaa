@@ -33,7 +33,7 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | Fonts | `next/font/google` — Bodoni Moda, Inter, IBM Plex Mono | in place |
 | DB + storage | **Supabase** (free tier) — Postgres `cases` table, Auth (one admin user), Storage (`case-media` public, `case-files` private) | wired up |
 | Transactional email | **Resend** (free tier), REST via `src/lib/email.ts` | wired up; needs `RESEND_API_KEY` + a verified domain for real buyer addresses |
-| Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`) — polls a table of pending solution sends | not built |
+| Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`, every 10 min) → `custom-worker.ts` → `/api/cron/solutions` | built |
 | Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | configured, not yet deployed |
 | Payments | UddoktaPay **or** BangoPay (TBD) | not built |
 
@@ -46,7 +46,8 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 - **Adapter: `@opennextjs/cloudflare`** (OpenNext). This is the actively maintained, Cloudflare-endorsed path. `@cloudflare/next-on-pages` is deprecated on npm — do not use it.
 - **It targets Workers with Static Assets, not Cloudflare Pages.** OpenNext has no Pages target. Prerendered HTML, `/_next/static` and `/public` are served as static assets; only non-static requests run in the Worker.
 - **Edge runtime is unsupported** by the adapter. Never add `export const runtime = "edge"` to a route. Node runtime (the default) is what runs, under `nodejs_compat`.
-- **Config files:** `wrangler.jsonc` (Worker name, compat flags, assets binding, later: crons/bindings), `open-next.config.ts` (adapter options — currently no ISR cache, deliberately), `next.config.ts` calls `initOpenNextCloudflareForDev()` so `next dev` can reach bindings.
+- **Worker entry is `custom-worker.ts`, not `.open-next/worker.js`.** OpenNext's generated worker exports only `fetch`, so a cron trigger would have nothing to call. The custom entry re-exports that `fetch` (plus the durable-object classes) and adds `scheduled`, which dispatches an internal `POST /api/cron/solutions` through the very same handler — so the job runs with the full Next runtime instead of a second, parallel stack. Pattern is the adapter's own: https://opennext.js.org/cloudflare/howtos/custom-worker
+- **Config files:** `wrangler.jsonc` (Worker name, compat flags, assets binding, cron triggers, later: bindings), `open-next.config.ts` (adapter options — currently no ISR cache, deliberately), `next.config.ts` calls `initOpenNextCloudflareForDev()` so `next dev` can reach bindings.
 - **Scripts:** `npm run dev` (unchanged, Next dev server) · `npm run build` (**plain `next build` — keep it that way**; OpenNext calls it internally, so making it run OpenNext too double-bundles and breaks deploy with duplicate exports in `next-env.mjs`) · `npm run build:cf` (OpenNext bundle → `.open-next/`; runs `next build` itself) · `npm run preview` (bundle + run in local `workerd`, port 8787 — **the real test**) · `npm run deploy` (bundle + `wrangler deploy`, needs a Cloudflare login) · `npm run cf-typegen` (types for bindings).
 - **Cloudflare CI settings (set in the dashboard, not the defaults):** build command **`npx opennextjs-cloudflare build`**, deploy command **`npx opennextjs-cloudflare deploy`**. The dashboard default (`npm run build` + `npx wrangler deploy`) fails because plain `next build` never produces `.open-next/`.
 - **Worker name is `goyenda`** (`wrangler.jsonc` → `name`). It must match the dashboard exactly or wrangler overrides it with a warning on every deploy. The live URL is `https://goyenda.<account-subdomain>.workers.dev`; the subdomain is an account setting (Workers & Pages → "Your subdomain"), target value `goyenda`. `SITE.url` falls back to `https://goyenda.goyenda.workers.dev` — if the subdomain ends up different, set `NEXT_PUBLIC_SITE_URL` as a build variable rather than editing the fallback.
@@ -64,7 +65,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
 4. **Checkout** — `/checkout/[slug]` page ✅ **built** (order summary, email, bKash/Nagad/card choice, terms) behind a provider-agnostic seam in `src/lib/payments.ts`. The placeholder provider returns `unavailable`, so the page ends in a "Payments aren't open yet" panel. ⬜ Real aggregator (UddoktaPay / BangoPay) still to wire.
 5. **Success page** — `/checkout/[slug]/success` ✅ **designed** with a MOCK order (`mockOrder()` in `src/lib/orders.ts`, visible "Preview · mock order" strip). Download button is a dead `#` until signed URLs exist. ⬜ Real order lookup + download route still to build.
-6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **purchase completion time, not download time.** Needs a scheduled job (a Cloudflare Cron Trigger calling a `scheduled()` handler that polls a `pending_sends` table) plus Resend. ⬜
+6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **approval time, not download time.** ✅ **built**: a Cloudflare cron trigger every 10 minutes → `custom-worker.ts` `scheduled()` → `/api/cron/solutions` → `sendDueSolutions()` emails the sealed solution and marks the row. See "Solution delivery" below.
 7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle, drag-reorder. ✅ **built** (`/admin`). Still to come: order list, minimal theme settings. Deliberately **not** a full CMS.
 
 ### Difficulty ranks
@@ -111,6 +112,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 - Shared data/helpers live in `src/lib/`.
 - Mobile-first Tailwind. Use `svh` (not `vh`) for full-height sections so mobile browser chrome doesn't clip them.
 - **Never commit `.env*` files, API keys, or secrets.**
+- **Anything the Worker needs at runtime is a Worker Secret** (`SUPABASE_SERVICE_ROLE_KEY`, `BKASH_NUMBER`, `ADMIN_EMAIL`, `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`); `NEXT_PUBLIC_*` are build variables. Plain dashboard *Variables* are dropped by `wrangler deploy` — Secrets survive, so use Secrets.
 
 ---
 
@@ -149,8 +151,14 @@ src/lib/payments.ts             PaymentProvider seam, PAYMENT_METHODS,
                                 placeholder provider, getPaymentProvider()
 src/app/checkout/[slug]/        page (summary + form) and startCheckout action
 src/app/checkout/[slug]/success/  post-payment page (mock order for now)
-src/lib/orders.ts               Order type (future orders row), mockOrder,
-                                solutionTimeFor, Dhaka-time formatters
+src/lib/orders.ts               Dhaka-time formatters
+src/lib/orders-data.ts          server-only order reads/writes: reservation,
+                                submit, admin queue/history, due-solution
+                                query + send bookkeeping, solutionSendAt
+src/lib/solutions.ts            sendDueSolutions() — the delayed-answer job
+src/app/api/cron/solutions/     cron endpoint (CRON_SECRET header guard)
+src/app/orders/[token]/         buyer status page, /download, /solution
+custom-worker.ts                Worker entry: OpenNext fetch + scheduled()
 src/components/SolutionCountdown.tsx  live "in 2h 41m" via useSyncExternalStore
 src/components/CheckoutForm.tsx client form → "not open yet" panel
 src/app/not-found.tsx           styled 404 ("This trail's gone cold.")
@@ -207,6 +215,15 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Deleting a case removes its storage objects** (best-effort). Removing a file inside the form only detaches it; the object stays until the case is deleted — orphans are possible after abandoned edits.
 - **Metadata:** root layout sets `metadataBase` from `SITE.url` (`NEXT_PUBLIC_SITE_URL`, fallback to the workers.dev URL) and a `%s — Goyenda` title template — page titles must NOT append the suffix themselves. OG/Twitter defaults come from the layout; per-page `description` overrides are fine.
 - **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
+
+### Solution delivery (the delayed-answer job)
+
+- **Clock starts at approval.** `approveOrder` stamps `solution_send_at = approved_at + RANKS[rank].solutionDelayHours`. Nothing about downloading changes it.
+- **The job** is `sendDueSolutions()` in `src/lib/solutions.ts`: take up to 25 orders that are `paid`, `solution_sent = false`, past `solution_send_at`, under the attempt cap; email each buyer a link to `/orders/[token]/solution`; mark the row. `solution_sent` is the idempotency flag, so a double run never mails twice.
+- **Failures are visible, not silent.** A failed send bumps `solution_attempts` and stores `solution_error`; the first failure also emails `ADMIN_EMAIL`. At `MAX_SOLUTION_ATTEMPTS` (5) the row stops being picked up — a bad address can't loop forever. The usual cause is a case with no `solution_pdf_path`: upload it in the admin, then reset that row's `solution_attempts` to 0 and the next tick delivers.
+- **`/orders/[token]/solution`** mints a 10-minute signed URL for `solution_pdf_path`, and refuses (403) before `solution_send_at` — guessing the URL early gets you nothing. Unlike the case download it has **no** 7-day window: the answer stays reachable from the order page.
+- **The cron route is publicly routable**, so it's guarded by the `CRON_SECRET` header (`x-goyenda-cron`) and refuses to run when the secret isn't configured. `custom-worker.ts` reads the same secret from the Worker env.
+- **Locally:** `curl -X POST -H "x-goyenda-cron: $CRON_SECRET" localhost:3000/api/cron/solutions` — the response JSON is the run summary (`due`, `sent`, `failed`).
 
 ### Auth email (Supabase → admin inbox)
 

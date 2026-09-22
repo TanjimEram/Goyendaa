@@ -17,6 +17,12 @@ ADMIN_EMAIL=
 # checkout testing).
 RESEND_API_KEY=
 
+# Shared secret between the Worker's cron trigger and /api/cron/solutions.
+# Any long random string; generate one with:
+#   node -e "console.log(crypto.randomUUID())"
+# Without it the cron route refuses to run (fails closed).
+CRON_SECRET=
+
 # Sender. Until a domain is verified in Resend this MUST be
 # onboarding@resend.dev, and Resend will only deliver to the account
 # owner's own address. Verify a domain before real buyers.

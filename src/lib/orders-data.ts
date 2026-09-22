@@ -20,6 +20,9 @@ export interface OrderRow {
   rejection_reason: string | null;
   solution_send_at: string | null;
   solution_sent: boolean;
+  solution_sent_at: string | null;
+  solution_attempts: number;
+  solution_error: string | null;
   created_at: string;
   submitted_at: string | null;
   approved_at: string | null;
@@ -200,6 +203,55 @@ export async function getOrderByIdAdmin(id: string): Promise<OrderWithCase | nul
     .maybeSingle();
   if (error) throw error;
   return (data as OrderWithCase | null) ?? null;
+}
+
+/**
+ * Orders whose solution is due: paid, not sent, past the send time, and
+ * still under the attempt cap. Service role — the cron has no session.
+ */
+export async function getDueSolutionOrders(limit = 25): Promise<OrderWithCase[]> {
+  const supabase = await createServiceClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`*, ${CASE_JOIN}`)
+    .eq("status", "paid")
+    .eq("solution_sent", false)
+    .lt("solution_attempts", MAX_SOLUTION_ATTEMPTS)
+    .lte("solution_send_at", new Date().toISOString())
+    .order("solution_send_at", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data as OrderWithCase[];
+}
+
+/** After the cap the cron stops retrying and the admin has to step in. */
+export const MAX_SOLUTION_ATTEMPTS = 5;
+
+export async function markSolutionSent(orderId: string, attempts: number): Promise<void> {
+  const supabase = await createServiceClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      solution_sent: true,
+      solution_sent_at: new Date().toISOString(),
+      solution_attempts: attempts + 1,
+      solution_error: null,
+    })
+    .eq("id", orderId);
+  if (error) throw error;
+}
+
+export async function markSolutionFailed(
+  orderId: string,
+  attempts: number,
+  reason: string,
+): Promise<void> {
+  const supabase = await createServiceClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ solution_attempts: attempts + 1, solution_error: reason.slice(0, 300) })
+    .eq("id", orderId);
+  if (error) throw error;
 }
 
 /** The solution clock starts at approval — never at download. */

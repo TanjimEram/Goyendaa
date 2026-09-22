@@ -7,7 +7,9 @@
   // https://<name>.<account-subdomain>.workers.dev; the subdomain is an
   // account-level setting (Workers & Pages -> "Your subdomain"), not this file.
   "name": "goyenda",
-  "main": ".open-next/worker.js",
+  // Not .open-next/worker.js directly: custom-worker.ts re-exports OpenNext's
+  // fetch handler and adds the scheduled() handler the cron trigger calls.
+  "main": "custom-worker.ts",
 
   // nodejs_compat is required by OpenNext. The date pins workerd behaviour;
   // bump it deliberately, not as a side effect of other changes.
@@ -29,9 +31,15 @@
   //    it OpenNext serves the original file, which is fine until real case
   //    thumbnails exist. Free tier: 5,000 unique transforms/month.
   //  - services / WORKER_SELF_REFERENCE: only needed with the ISR cache.
-  //  - triggers.crons: for the delayed solution emails (replaces Vercel Cron).
   //  - vars / secrets: Supabase + Resend + payment keys go in as Worker
   //    secrets via the dashboard or `wrangler secret put`, never in this file.
+
+  // Delayed solution emails. Every 10 minutes is well inside the 1-3 hour
+  // rank delays, and the job is a no-op when nothing is due. Free plan
+  // allows up to 5 cron triggers per account.
+  "triggers": {
+    "crons": ["*/10 * * * *"]
+  },
 
   "observability": {
     "enabled": true

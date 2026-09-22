@@ -38,6 +38,8 @@
   ],
   "exclude": [
     "node_modules",
-    ".open-next"
+    ".open-next",
+    "brag-output",
+    "custom-worker.ts"
   ]
 }

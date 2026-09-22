@@ -49,6 +49,10 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
   const c = order.case;
   const rank = RANKS[c.difficulty_rank];
   const code = `CASE ${String(c.case_number).padStart(3, "0")}`;
+  const solutionReady =
+    order.status === "paid" &&
+    !!order.solution_send_at &&
+    new Date(order.solution_send_at) <= new Date();
 
   const heading =
     order.status === "paid"
@@ -150,27 +154,57 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
               </div>
 
               <div className="flex flex-col border border-noir-line bg-noir-raised p-6 sm:p-8">
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">Step 2 · Later</p>
-                <h2 className="mt-3 font-display text-2xl font-semibold text-cream sm:text-3xl">
-                  The solution arrives{" "}
-                  {order.solution_send_at && (
-                    <SolutionCountdown
-                      solutionAt={order.solution_send_at}
-                      fallback={`at ${formatTimeBD(order.solution_send_at)}`}
-                    />
-                  )}
-                  .
-                </h2>
-                <p className="mt-3 text-sm leading-[1.7] text-ash">
-                  {rank.label} files are held for {rank.solutionDelayHours} hour
-                  {rank.solutionDelayHours === 1 ? "" : "s"} from the moment we confirmed
-                  your payment. We&rsquo;ll email the sealed solution to{" "}
-                  <span className="text-cream">{order.buyer_email}</span>
-                  {order.solution_send_at && (
-                    <> at <span className="text-cream">{formatTimeBD(order.solution_send_at)}</span> Bangladesh time</>
-                  )}
-                  . It isn&rsquo;t in the download, so there&rsquo;s nothing to peek at.
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+                  Step 2 &middot; {solutionReady ? "Unsealed" : "Later"}
                 </p>
+                {solutionReady ? (
+                  <>
+                    <h2 className="mt-3 font-display text-2xl font-semibold text-cream sm:text-3xl">
+                      The solution is unsealed.
+                    </h2>
+                    <p className="mt-3 text-sm leading-[1.7] text-ash">
+                      Held {rank.solutionDelayHours} hour
+                      {rank.solutionDelayHours === 1 ? "" : "s"}, as promised
+                      {order.solution_sent && (
+                        <>
+                          {" "}&mdash; a copy is in{" "}
+                          <span className="text-cream">{order.buyer_email}</span>
+                        </>
+                      )}
+                      . Open it only once everyone has named a suspect.
+                    </p>
+                    <a
+                      href={`/orders/${order.access_token}/solution`}
+                      className="group mt-6 inline-flex items-center justify-center gap-3 border border-brass px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-brass transition-all duration-300 ease-noir hover:bg-brass hover:text-noir"
+                    >
+                      Read the solution
+                      <span aria-hidden className="transition-transform duration-300 ease-noir group-hover:translate-y-0.5">&darr;</span>
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="mt-3 font-display text-2xl font-semibold text-cream sm:text-3xl">
+                      The solution arrives{" "}
+                      {order.solution_send_at && (
+                        <SolutionCountdown
+                          solutionAt={order.solution_send_at}
+                          fallback={`at ${formatTimeBD(order.solution_send_at)}`}
+                        />
+                      )}
+                      .
+                    </h2>
+                    <p className="mt-3 text-sm leading-[1.7] text-ash">
+                      {rank.label} files are held for {rank.solutionDelayHours} hour
+                      {rank.solutionDelayHours === 1 ? "" : "s"} from the moment we confirmed
+                      your payment. We&rsquo;ll email the sealed solution to{" "}
+                      <span className="text-cream">{order.buyer_email}</span>
+                      {order.solution_send_at && (
+                        <> at <span className="text-cream">{formatTimeBD(order.solution_send_at)}</span> Bangladesh time</>
+                      )}
+                      . It isn&rsquo;t in the download, so there&rsquo;s nothing to peek at.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           )}

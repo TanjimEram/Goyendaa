@@ -132,6 +132,58 @@ ${button(o.statusUrl, "Track this order")}
   };
 }
 
+/** To the buyer: the wait is over — the sealed solution is unlocked. */
+export function buyerSolutionMail(
+  o: OrderMailInfo,
+  opts: { solutionUrl: string; heldHours: number },
+): Omit<Mail, "to"> {
+  return {
+    subject: `The solution — ${o.caseTitle} (${o.orderCode})`,
+    text: `Time's up, ${o.buyerName}.
+
+The sealed solution to ${o.caseTitle} is here: ${opts.solutionUrl}
+
+Read it only once everyone has named a suspect. Order ${o.orderCode}.`,
+    html: shell(
+      "Time's up.",
+      `<p>The sealed solution to <strong style="color:#efe6d5">${esc(o.caseTitle)}</strong> is unlocked &mdash; ${opts.heldHours} hour${opts.heldHours === 1 ? "" : "s"} after your payment was confirmed, exactly as promised.</p>
+${button(opts.solutionUrl, "Read the solution")}
+<p style="font-size:13px;">Open it only once everyone at the table has committed to a suspect. There's no going back.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
+${row("Order", esc(o.orderCode))}
+${row("Case", `${esc(o.caseCode)} — ${esc(o.caseTitle)}`)}
+</table>`,
+    ),
+  };
+}
+
+/** To the admin: a solution came due but couldn't be sent. */
+export function adminSolutionFailedMail(
+  o: OrderMailInfo,
+  reason: string,
+  adminUrl: string,
+): Omit<Mail, "to"> {
+  return {
+    subject: `[Goyenda] Solution delivery failed — ${o.orderCode}`,
+    text: `The solution for ${o.orderCode} (${o.caseTitle}, ${o.buyerEmail}) came due but could not be sent.
+
+Reason: ${reason}
+
+Fix it and the cron will retry, or send the buyer ${o.statusUrl} by hand. Orders: ${adminUrl}`,
+    html: shell(
+      "A solution didn't go out.",
+      `<p>Order <strong style="color:#efe6d5">${esc(o.orderCode)}</strong> came due and the send failed.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:12px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
+${row("Case", `${esc(o.caseCode)} — ${esc(o.caseTitle)}`)}
+${row("Buyer", esc(o.buyerEmail))}
+${row("Reason", `<strong>${esc(reason)}</strong>`)}
+</table>
+<p style="font-size:13px;">The job retries every run until it works or hits the attempt cap. This alert is sent once, on the first failure.</p>
+${button(adminUrl, "Open orders")}`,
+    ),
+  };
+}
+
 /** To the buyer: approved — here's the file, here's when the solution lands. */
 export function buyerOrderApprovedMail(
   o: OrderMailInfo,
