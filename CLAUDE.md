@@ -34,8 +34,8 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | DB + storage | **Supabase** (free tier) — Postgres `cases` table, Auth (one admin user), Storage (`case-media` public, `case-files` private) | wired up |
 | Transactional email | **Resend** (free tier), REST via `src/lib/email.ts` | wired up; needs `RESEND_API_KEY` + a verified domain for real buyer addresses |
 | Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`, every 10 min) → `custom-worker.ts` → `/api/cron/solutions` | built |
-| Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | configured, not yet deployed |
-| Payments | UddoktaPay **or** BangoPay (TBD) | not built |
+| Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | live at `goyenda.goyenda.workers.dev` |
+| Payments | **Manual bKash Send Money + TrxID**, verified by the admin. No aggregator, no fees, no API key. | built |
 
 > ⚠️ This is **Next.js 16** — APIs differ from older training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing code. Notably: `LayoutProps<'/'>` and `PageProps<'/route'>` are **global** type helpers requiring no import.
 
@@ -63,8 +63,8 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 1. **Homepage** — hero (video-capable), featured cases, brand story. ✅ **built**
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
-4. **Checkout** — `/checkout/[slug]` page ✅ **built** (order summary, email, bKash/Nagad/card choice, terms) behind a provider-agnostic seam in `src/lib/payments.ts`. The placeholder provider returns `unavailable`, so the page ends in a "Payments aren't open yet" panel. ⬜ Real aggregator (UddoktaPay / BangoPay) still to wire.
-5. **Success page** — `/checkout/[slug]/success` ✅ **designed** with a MOCK order (`mockOrder()` in `src/lib/orders.ts`, visible "Preview · mock order" strip). Download button is a dead `#` until signed URLs exist. ⬜ Real order lookup + download route still to build.
+4. **Checkout** — `/checkout/[slug]` ✅ **built**: manual bKash **Send Money** to a personal number, with the reserved order code as the reference and the TrxID typed back into a form. No payment provider is involved. See "Checkout behaviour" below.
+5. **Order page** — `/orders/[token]` ✅ **built**: the buyer's private page (pending / paid / rejected), the signed case-file download, and the solution once it unseals. Replaced the old `/checkout/[slug]/success` mock.
 6. **Solution delivery** — **not immediate.** Delay is set by the case's difficulty rank. Trigger point is **approval time, not download time.** ✅ **built**: a Cloudflare cron trigger every 10 minutes → `custom-worker.ts` `scheduled()` → `/api/cron/solutions` → `sendDueSolutions()` emails the sealed solution and marks the row. See "Solution delivery" below.
 7. **Admin dashboard** — case CRUD with file upload, publish/unpublish toggle, drag-reorder. ✅ **built** (`/admin`). Still to come: order list, minimal theme settings. Deliberately **not** a full CMS.
 
@@ -84,7 +84,7 @@ Defined once in `src/lib/cases.ts` (`RANKS`). Change them there, not in componen
 
 ## Build order
 
-**Frontend first, page by page.** Homepage → catalog → case detail → checkout placeholder → success page, all fully mobile-responsive, *before* any backend, payment integration, or admin work.
+**Frontend first, page by page.** That order is done: homepage → catalog → case detail → checkout → order page, all mobile-responsive, then Supabase + admin, then orders + delivery. What remains is content, not scaffolding.
 
 ---
 
@@ -118,7 +118,7 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 
 ## Current status
 
-**Phase: every page exists; checkout and success run on placeholders. Next: orders table + real payment provider + webhook + signed download + solution-delivery cron.**
+**Phase: the machine works end to end — browse → manual bKash checkout → admin approval → signed download → delayed solution email. What's missing is content: real case PDFs, thumbnails and per-case copy.**
 
 The project was reset from scratch on 2026-09-11 — old code wiped, GitHub remote force-pushed back to an empty initial commit. Pre-reset history is preserved locally in the `pre-reset-backup` git tag.
 
@@ -147,10 +147,11 @@ src/lib/supabase/{env,client,server}.ts
                                 (cookie-aware + anonymous public)
 src/lib/storage.ts              bucket names, URL↔path helpers
 src/lib/slug.ts                 slugify + SLUG_PATTERN
-src/lib/payments.ts             PaymentProvider seam, PAYMENT_METHODS,
-                                placeholder provider, getPaymentProvider()
-src/app/checkout/[slug]/        page (summary + form) and startCheckout action
-src/app/checkout/[slug]/success/  post-payment page (mock order for now)
+src/app/checkout/[slug]/        Send Money instructions + TrxID form,
+                                submitManualPayment action
+src/lib/email.ts                Resend REST + every mail template
+src/lib/env.ts                  serverEnv/requireEnv/orderEnv (process.env
+                                or the Cloudflare binding)
 src/lib/orders.ts               Dhaka-time formatters
 src/lib/orders-data.ts          server-only order reads/writes: reservation,
                                 submit, admin queue/history, due-solution
@@ -160,7 +161,9 @@ src/app/api/cron/solutions/     cron endpoint (CRON_SECRET header guard)
 src/app/orders/[token]/         buyer status page, /download, /solution
 custom-worker.ts                Worker entry: OpenNext fetch + scheduled()
 src/components/SolutionCountdown.tsx  live "in 2h 41m" via useSyncExternalStore
-src/components/CheckoutForm.tsx client form → "not open yet" panel
+src/components/CheckoutForm.tsx name / email / TrxID / order-code form
+src/components/CopyButton.tsx   clipboard button (bKash number, order code)
+src/components/admin/OrderReview.tsx  pending-order card, approve / reject
 src/app/not-found.tsx           styled 404 ("This trail's gone cold.")
 src/app/{terms,privacy,refunds}/  legal pages — DRAFTS, see note in terms
 src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
@@ -242,9 +245,13 @@ Catalog behaviour worth knowing:
 
 Checkout behaviour worth knowing:
 
-- **Provider seam.** `startCheckout` validates (email, method, terms), re-reads the case server-side (the form's price is display only), then calls `getPaymentProvider().createCheckout()`. Results: `redirect` (send buyer to the hosted page), `unavailable` (placeholder — show the panel), `error`. A real provider = one new file + a `case` in `getPaymentProvider()` keyed on `PAYMENT_PROVIDER`.
-- **Nothing is persisted yet.** No `orders` table; that lands with the real provider + webhook. `Order` in `src/lib/orders.ts` is the intended row shape — the success page already renders from it, so wiring real data means replacing `mockOrder()` with a lookup by `?order=` ref and deleting the preview strip.
-- **Solution timing is computed from `paidAt`**, never from download time (`solutionTimeFor`). Times display in Asia/Dhaka.
+- **No payment provider, by design.** The buyer sends money themselves (bKash Send Money → `BKASH_NUMBER`) and types the TrxID from their SMS into the form. You are the webhook: cross-check it in the bKash app, then Approve. Zero fees, no trade licence, no API key — at the cost of manual approval inside the window promised by `SITE.confirmationWindow`.
+- **The order code is reserved before any money moves.** The `gyd_cs` cookie (planted by `proxy.ts` on `/checkout/*`) keys one `started` order per session per case, so a refresh reuses the same `GYD-####` instead of minting a new one. The buyer puts that code in bKash's reference field — that's what ties an anonymous Send Money to an order.
+- **Lifecycle:** `started` (reserved) → `pending` (details submitted) → `paid` / `rejected`. Enforced by a CHECK constraint plus `.eq("status", …)` on every transition, so a double submit can't skip a state.
+- **Order actions live in `src/app/admin/(dashboard)/orders/actions.ts`.** Approve requires `pending` + an uploaded case PDF, stamps `approved_at`, computes `solution_send_at`, and emails the buyer; if that email fails it returns a warning telling you to send the link by hand. Reject needs a reason (stored, and shown to the buyer).
+- **Solution timing is computed from approval**, never from download time (`solutionSendAt`). Times display in Asia/Dhaka.
+- **Three emails, all via Resend:** admin "new order to verify", buyer "order received", buyer "file is ready". The fourth (the solution) comes from the cron job.
+- **If an aggregator is ever added** (UddoktaPay / BangoPay), it slots in beside this rather than replacing it: the `orders` table, the buyer page, the download route and the solution job all stay — only the "how did we learn it was paid" step changes.
 - **Email is the delivery address** for both the case PDF and the delayed solution. The form says so.
 - **Checkout links to `/terms` and `/refunds`** (new tab) from the consent line.
 
@@ -259,16 +266,15 @@ Case detail behaviour worth knowing:
 
 Known placeholders, to be replaced:
 
-- **The eight placeholder cases live in `supabase/seed.sql`**, not in code. Run it once for content; edit/delete them from `/admin`.
+- **The placeholder cases live in `supabase/seed.sql`**, not in code. They're premises only — no real PDFs behind them. Edit/delete from `/admin`.
 - **No real thumbnails or page scans yet.** Cards use the generated redacted preview until a thumbnail is uploaded; the detail page renders uploaded gallery images (first three) and falls back to div mock-ups.
 - **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
-- **Checkout can't take money** — placeholder provider only. Success page + orders table + real aggregator are the next steps.
+- **No case PDFs are uploaded yet.** Until a case has `case_pdf_path`, Approve refuses; until it has `solution_pdf_path`, the solution job fails and alerts the admin. Upload both together.
 - **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
-- **Legal pages are drafts.** Plain-language terms/privacy/refunds written for a sole-trader digital-goods seller in BD. Not legal advice — have them read before launch. `SITE.legalUpdated` must move when wording changes. Privacy §2 names the provider categories generically; fill in once the aggregator and email service are chosen.
-- **`SITE.contactEmail` is a placeholder** (`hello@goyenda.com`) — it appears on contact, FAQ, legal and success pages. Set the real one before launch.
-- **"7-day download window"** (`SITE.downloadWindowDays`) is a policy assumption stated on terms, FAQ and the success page. The real signed-URL TTL must match it.
-- **The only `href="#"` left** is the mock download button on the success page, by design.
+- **Legal pages are drafts.** Plain-language terms/privacy/refunds written for a sole-trader digital-goods seller in BD. Not legal advice — have them read before launch. `SITE.legalUpdated` must move when wording changes. Privacy §2 still names provider categories generically; it can now say bKash (manual) and Resend by name.
+- **`SITE.contactEmail` is a placeholder** (`hello@goyenda.com`) — it appears on contact, FAQ, the legal pages, the order page and every email's reply-to. Set the real one before launch.
+- **The 7-day download window** (`SITE.downloadWindowDays`) is enforced by `/orders/[token]/download` (410 once past it) and stated on terms, FAQ and in the approval email. The *solution* link deliberately has no window.
 
 ---
 
