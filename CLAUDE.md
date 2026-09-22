@@ -237,6 +237,8 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Resend (`RESEND_API_KEY`)** — with no verified domain it only delivers to the Resend account owner, so it's admin-alerts-only. Once a domain exists it's the nicer API; just set its key and drop Brevo's.
 - **Neither** — every send logs `[email] no provider key set — would send …` and returns not-ok. Local checkout testing works without email configured.
 
+**Verified 2026-09-22:** a real checkout through Brevo delivered both the admin alert and the buyer receipt to a gmail.com inbox, From `Goyenda <goyendaaa@gmail.com>`.
+
 Deliverability note: sending a gmail.com From through Brevo means SPF/DKIM align to Brevo, not Gmail. `gmail.com` publishes DMARC `p=none`, so mail is accepted, but a domain is still the right long-term answer.
 
 ### Auth email (Supabase → admin inbox)
