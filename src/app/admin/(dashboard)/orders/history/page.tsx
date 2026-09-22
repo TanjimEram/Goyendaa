@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatTaka } from "@/lib/cases";
 import { formatDateTimeBD } from "@/lib/orders";
 import { getOrderHistoryAdmin } from "@/lib/orders-data";
+import { SolutionSendButton } from "@/components/admin/SolutionSendButton";
 
 export const metadata = { title: "Order history" };
 
@@ -89,6 +90,13 @@ export default async function OrderHistoryPage() {
                         <span className={o.solution_sent ? "text-brass" : ""}>
                           {o.solution_sent ? "sent" : "scheduled"}
                         </span>
+                        {o.status === "paid" && (
+                          <SolutionSendButton
+                            orderId={o.id}
+                            alreadySent={o.solution_sent}
+                            error={o.solution_error}
+                          />
+                        )}
                       </>
                     ) : (
                       "—"

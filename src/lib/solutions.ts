@@ -5,6 +5,7 @@ import { adminSolutionFailedMail, buyerSolutionMail, sendMail } from "@/lib/emai
 import { orderEnv } from "@/lib/env";
 import {
   getDueSolutionOrders,
+  getOrderByIdService,
   markSolutionFailed,
   markSolutionSent,
   type OrderWithCase,
@@ -57,6 +58,30 @@ export async function sendDueSolutions(limit = 25): Promise<SolutionRunResult> {
   }
 
   return result;
+}
+
+/**
+ * Send one order's solution right now, on the admin's say-so — the buyer
+ * lost the email, or a send failed and they don't want to wait for the
+ * next tick. Bypasses the due-time and attempt-cap filters the cron uses;
+ * everything else (the mail, the marking) is the same path.
+ */
+export async function sendSolutionNow(
+  orderId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const order = await getOrderByIdService(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+  if (order.status !== "paid") {
+    return { ok: false, error: `Order is ${order.status} — only paid orders have a solution.` };
+  }
+
+  const reason = await deliver(order);
+  if (reason) {
+    await markSolutionFailed(order.id, order.solution_attempts, reason);
+    return { ok: false, error: reason };
+  }
+  await markSolutionSent(order.id, order.solution_attempts);
+  return { ok: true };
 }
 
 /** Returns a failure reason, or undefined when the mail went out. */

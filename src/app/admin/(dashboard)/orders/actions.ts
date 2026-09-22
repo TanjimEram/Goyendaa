@@ -6,6 +6,7 @@ import { buyerOrderApprovedMail, sendMail } from "@/lib/email";
 import { RANKS } from "@/lib/cases";
 import { formatDateTimeBD } from "@/lib/orders";
 import { getOrderByIdAdmin, solutionSendAt } from "@/lib/orders-data";
+import { sendSolutionNow } from "@/lib/solutions";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
@@ -88,6 +89,24 @@ export async function approveOrder(
     };
   }
   return {};
+}
+
+/**
+ * Sends (or re-sends) one order's solution immediately. Use when a buyer
+ * lost the email, or a scheduled send failed and you've since uploaded the
+ * missing PDF. Sending before the scheduled time is allowed — it's an
+ * admin override — so check the time in the table first.
+ */
+export async function resendSolution(
+  _prev: OrderActionState,
+  formData: FormData,
+): Promise<OrderActionState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+
+  const result = await sendSolutionNow(id);
+  refresh();
+  return result.ok ? { warning: "Solution sent." } : { error: result.error };
 }
 
 /** Marks the order rejected with a reason. No buyer email (by design, for now). */
