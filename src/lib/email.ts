@@ -4,14 +4,21 @@ import { serverEnv } from "@/lib/env";
 import { SITE } from "@/lib/site";
 
 /**
- * Transactional email via Resend's REST API. Plain fetch — no SDK, nothing
- * Node-specific, runs fine in the Worker.
+ * Transactional email. Plain fetch against a REST API — no SDK, nothing
+ * Node-specific, so it runs in the Worker as-is.
  *
- * Without RESEND_API_KEY every send is a no-op that logs, so local checkout
- * testing works before email is configured. With Resend's free tier and no
- * verified domain, EMAIL_FROM must be `onboarding@resend.dev` and mail only
- * reaches the account owner's address — fine for admin notifications, not
- * for buyers. Verify a domain before launch.
+ * Two providers, picked by whichever key is set:
+ *
+ *   BREVO_API_KEY   Brevo verifies a SINGLE SENDER ADDRESS by emailing it a
+ *                   code, so a plain gmail.com From works with no domain.
+ *                   300 mails/day free. This is the one that can reach real
+ *                   buyers today.
+ *   RESEND_API_KEY  Nicer API, but with no verified domain it only delivers
+ *                   to the Resend account owner — admin alerts only. Becomes
+ *                   the better choice once a domain exists.
+ *
+ * Brevo wins if both are set. With neither, every send is a no-op that logs,
+ * so local checkout testing works before email is configured.
  */
 export interface Mail {
   to: string;
@@ -21,15 +28,68 @@ export interface Mail {
   replyTo?: string;
 }
 
-export async function sendMail(mail: Mail): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const key = await serverEnv("RESEND_API_KEY");
-  const from = (await serverEnv("EMAIL_FROM")) ?? "Goyenda <onboarding@resend.dev>";
+type SendResult = { ok: boolean; id?: string; error?: string };
 
-  if (!key) {
-    console.warn(`[email] RESEND_API_KEY not set — would send "${mail.subject}" to ${mail.to}`);
-    return { ok: false, error: "email not configured" };
+/** "Goyenda <x@y.com>" → { name: "Goyenda", email: "x@y.com" } */
+function parseFrom(from: string): { name?: string; email: string } {
+  const match = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
+  return match ? { name: match[1] || undefined, email: match[2] } : { email: from.trim() };
+}
+
+export async function sendMail(mail: Mail): Promise<SendResult> {
+  const [brevoKey, resendKey, configuredFrom] = await Promise.all([
+    serverEnv("BREVO_API_KEY"),
+    serverEnv("RESEND_API_KEY"),
+    serverEnv("EMAIL_FROM"),
+  ]);
+  const replyTo = mail.replyTo ?? SITE.contactEmail;
+
+  if (brevoKey) {
+    return sendViaBrevo(mail, brevoKey, configuredFrom ?? `Goyenda <${SITE.contactEmail}>`, replyTo);
+  }
+  if (resendKey) {
+    return sendViaResend(mail, resendKey, configuredFrom ?? "Goyenda <onboarding@resend.dev>", replyTo);
   }
 
+  console.warn(`[email] no provider key set — would send "${mail.subject}" to ${mail.to}`);
+  return { ok: false, error: "email not configured" };
+}
+
+async function sendViaBrevo(
+  mail: Mail,
+  key: string,
+  from: string,
+  replyTo: string,
+): Promise<SendResult> {
+  const sender = parseFrom(from);
+  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: mail.to }],
+      subject: mail.subject,
+      htmlContent: mail.html,
+      textContent: mail.text,
+      replyTo: { email: replyTo },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`[email] Brevo ${res.status}: ${body}`);
+    return { ok: false, error: `Brevo ${res.status}` };
+  }
+  const data = (await res.json().catch(() => ({}))) as { messageId?: string };
+  return { ok: true, id: data.messageId };
+}
+
+async function sendViaResend(
+  mail: Mail,
+  key: string,
+  from: string,
+  replyTo: string,
+): Promise<SendResult> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -39,7 +99,7 @@ export async function sendMail(mail: Mail): Promise<{ ok: boolean; id?: string; 
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
-      reply_to: mail.replyTo ?? SITE.contactEmail,
+      reply_to: replyTo,
     }),
   });
 

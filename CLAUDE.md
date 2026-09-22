@@ -32,7 +32,7 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 | Styling | **Tailwind CSS v4** — tokens in `@theme` in `src/app/globals.css` | in place |
 | Fonts | `next/font/google` — Bodoni Moda, Inter, IBM Plex Mono | in place |
 | DB + storage | **Supabase** (free tier) — Postgres `cases` table, Auth (one admin user), Storage (`case-media` public, `case-files` private) | wired up |
-| Transactional email | **Resend** (free tier), REST via `src/lib/email.ts` | wired up; needs `RESEND_API_KEY` + a verified domain for real buyer addresses |
+| Transactional email | **Brevo** (300/day free, single-sender verification — no domain needed) or **Resend**, whichever key is set; REST via `src/lib/email.ts` | wired up |
 | Scheduled jobs | **Cloudflare Cron Triggers** (`triggers.crons` in `wrangler.jsonc`, every 10 min) → `custom-worker.ts` → `/api/cron/solutions` | built |
 | Hosting | **Cloudflare Workers** (free tier) via `@opennextjs/cloudflare` — **not Vercel, not Cloudflare Pages** | live at `goyenda.goyenda.workers.dev` |
 | Payments | **Manual bKash Send Money + TrxID**, verified by the admin. No aggregator, no fees, no API key. | built |
@@ -228,6 +228,16 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **`/orders/[token]/solution`** mints a 10-minute signed URL for `solution_pdf_path`, and refuses (403) before `solution_send_at` — guessing the URL early gets you nothing. Unlike the case download it has **no** 7-day window: the answer stays reachable from the order page.
 - **The cron route is publicly routable**, so it's guarded by the `CRON_SECRET` header (`x-goyenda-cron`) and refuses to run when the secret isn't configured. `custom-worker.ts` reads the same secret from the Worker env.
 - **Locally:** `curl -X POST -H "x-goyenda-cron: $CRON_SECRET" localhost:3000/api/cron/solutions` — the response JSON is the run summary (`due`, `sent`, `failed`).
+
+### Email providers
+
+`sendMail` picks a provider from whichever key is present, Brevo first:
+
+- **Brevo (`BREVO_API_KEY`)** — the one that can reach real buyers with no domain. It verifies a **single sender address** by emailing it a 6-digit code, so `EMAIL_FROM` can be `Goyenda <goyendaaa@gmail.com>`. 300 mails/day free, HTTPS REST (fine in the Worker). New accounts need a one-time manual approval from Brevo before sending unlocks.
+- **Resend (`RESEND_API_KEY`)** — with no verified domain it only delivers to the Resend account owner, so it's admin-alerts-only. Once a domain exists it's the nicer API; just set its key and drop Brevo's.
+- **Neither** — every send logs `[email] no provider key set — would send …` and returns not-ok. Local checkout testing works without email configured.
+
+Deliverability note: sending a gmail.com From through Brevo means SPF/DKIM align to Brevo, not Gmail. `gmail.com` publishes DMARC `p=none`, so mail is accepted, but a domain is still the right long-term answer.
 
 ### Auth email (Supabase → admin inbox)
 

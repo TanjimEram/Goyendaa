@@ -13,8 +13,14 @@ BKASH_NUMBER=
 # Where new-order notifications go.
 ADMIN_EMAIL=
 
-# Resend → API Keys. Without it, sends are skipped and logged (fine for local
-# checkout testing).
+# ONE email provider is enough. Brevo is the one that can reach real buyers
+# without owning a domain: it verifies a single sender address (your Gmail)
+# with a 6-digit code. Free tier 300/day. Brevo → SMTP & API → API Keys.
+BREVO_API_KEY=
+
+# Resend → API Keys. Only delivers to the Resend account owner until a
+# domain is verified, so it's admin-alerts-only for now. Set BOTH and Brevo
+# wins. With neither, sends are skipped and logged (fine for local testing).
 RESEND_API_KEY=
 
 # Shared secret between the Worker's cron trigger and /api/cron/solutions.
@@ -23,7 +29,7 @@ RESEND_API_KEY=
 # Without it the cron route refuses to run (fails closed).
 CRON_SECRET=
 
-# Sender. Until a domain is verified in Resend this MUST be
-# onboarding@resend.dev, and Resend will only deliver to the account
-# owner's own address. Verify a domain before real buyers.
-EMAIL_FROM=Goyenda <onboarding@resend.dev>
+# Sender, as "Name <address>". With Brevo this must be the address you
+# verified there (goyendaaa@gmail.com). With Resend and no domain it must be
+# onboarding@resend.dev.
+EMAIL_FROM=Goyenda <goyendaaa@gmail.com>

@@ -29,20 +29,15 @@ export async function requireEnv(name: string): Promise<string> {
   return v;
 }
 
-/** Everything the checkout + admin order flow needs, resolved once. */
+/**
+ * Everything the checkout + admin order flow needs, resolved once.
+ * Email provider keys are NOT here — `sendMail` picks its own provider.
+ */
 export async function orderEnv() {
-  const [bkashNumber, adminEmail, resendKey, emailFrom, serviceRoleKey] = await Promise.all([
+  const [bkashNumber, adminEmail, serviceRoleKey] = await Promise.all([
     requireEnv("BKASH_NUMBER"),
     requireEnv("ADMIN_EMAIL"),
-    serverEnv("RESEND_API_KEY"),
-    serverEnv("EMAIL_FROM"),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
   ]);
-  return {
-    bkashNumber,
-    adminEmail,
-    resendKey,
-    emailFrom: emailFrom ?? "Goyenda <onboarding@resend.dev>",
-    serviceRoleKey,
-  };
+  return { bkashNumber, adminEmail, serviceRoleKey };
 }
