@@ -2,7 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { RANKS, isRank, parseContentsText, type ContentItem } from "@/lib/cases";
+import {
+  RANKS,
+  isRank,
+  limitMessage,
+  parseContentsText,
+  withinLimit,
+  type ContentItem,
+} from "@/lib/cases";
 import { getCaseByIdAdmin } from "@/lib/cases-data";
 import { SLUG_PATTERN, slugify } from "@/lib/slug";
 import { MEDIA_BUCKET, FILES_BUCKET, publicUrlToPath } from "@/lib/storage";
@@ -12,6 +19,33 @@ export interface CaseFormState {
   error?: string;
   /** Field-level messages, keyed by input name. */
   fields?: Record<string, string>;
+  /**
+   * What the admin submitted, echoed back on failure. React 19 resets a
+   * form after its action runs, so uncontrolled inputs would otherwise
+   * snap back to their original values and the typing would be lost.
+   */
+  values?: Record<string, string>;
+}
+
+/** Text fields echoed back after a failed save. Uploads live in client state. */
+const ECHOED_FIELDS = [
+  "premise",
+  "description",
+  "tags",
+  "price",
+  "solve_minutes",
+  "page_count",
+  "contents_text",
+  "purchase_info",
+  "delivery_info",
+  "player_note",
+  "content_note",
+  "published",
+  "featured",
+] as const;
+
+function echo(fd: FormData): Record<string, string> {
+  return Object.fromEntries(ECHOED_FIELDS.map((k) => [k, String(fd.get(k) ?? "")]));
 }
 
 /** Shape of the row we write. Mirrors `public.cases` minus generated cols. */
@@ -49,8 +83,9 @@ function str(fd: FormData, key: string) {
   return String(fd.get(key) ?? "").trim();
 }
 function int(fd: FormData, key: string) {
-  const n = Number.parseInt(str(fd, key), 10);
-  return Number.isFinite(n) ? n : NaN;
+  // Number() rather than parseInt: "240abc" and "2.5" must fail, not truncate.
+  const raw = str(fd, key);
+  return raw === "" ? NaN : Number(raw);
 }
 function list(fd: FormData, key: string): string[] {
   // Multi-value inputs arrive as JSON from the client form.
@@ -77,16 +112,18 @@ function parseCaseForm(fd: FormData):
   if (!SLUG_PATTERN.test(slug)) fields.slug = "Lowercase letters, numbers and hyphens only.";
 
   const price = int(fd, "price");
-  if (!(price >= 0)) fields.price = "Price must be 0 or more.";
+  if (!withinLimit("price", price)) fields.price = limitMessage("price");
 
   const difficulty_rank = str(fd, "difficulty_rank");
   if (!isRank(difficulty_rank)) fields.difficulty_rank = "Pick a rank.";
 
   const solve_minutes = int(fd, "solve_minutes");
-  if (!(solve_minutes > 0)) fields.solve_minutes = "Must be at least 1 minute.";
+  if (!withinLimit("solve_minutes", solve_minutes)) {
+    fields.solve_minutes = limitMessage("solve_minutes");
+  }
 
   const page_count = int(fd, "page_count");
-  if (!(page_count >= 0)) fields.page_count = "Must be 0 or more.";
+  if (!withinLimit("page_count", page_count)) fields.page_count = limitMessage("page_count");
 
   const tags = str(fd, "tags")
     .split(",")
@@ -138,24 +175,32 @@ export async function saveCase(
   const supabase = await requireAdmin();
   const id = str(formData, "id") || null;
 
+  const values = echo(formData);
   const parsed = parseCaseForm(formData);
-  if (!parsed.ok) return { fields: parsed.fields, error: "Fix the fields marked below." };
+  if (!parsed.ok) {
+    const n = Object.keys(parsed.fields).length;
+    return {
+      fields: parsed.fields,
+      values,
+      error: `Fix ${n} field${n === 1 ? "" : "s"} before saving.`,
+    };
+  }
   const { row } = parsed;
 
   // A rank change is fine; a rank we don't know about is not.
   if (!RANKS[row.difficulty_rank as keyof typeof RANKS]) {
-    return { error: "Unknown difficulty rank." };
+    return { error: "Unknown difficulty rank.", values };
   }
 
   let previousSlug: string | null = null;
 
   if (id) {
     const existing = await getCaseByIdAdmin(id);
-    if (!existing) return { error: "That case no longer exists." };
+    if (!existing) return { error: "That case no longer exists.", values };
     previousSlug = existing.slug;
 
     const { error } = await supabase.from("cases").update(row).eq("id", id);
-    if (error) return { error: friendlyDbError(error.message) };
+    if (error) return { ...dbErrorState(error.message), values };
   } else {
     // New cases go to the end of the catalogue.
     const { data: last } = await supabase
@@ -167,7 +212,7 @@ export async function saveCase(
     const position = (last?.position ?? 0) + 1;
 
     const { error } = await supabase.from("cases").insert({ ...row, position });
-    if (error) return { error: friendlyDbError(error.message) };
+    if (error) return { ...dbErrorState(error.message), values };
   }
 
   revalidateCasePages(row.slug, previousSlug);
@@ -227,4 +272,23 @@ function friendlyDbError(message: string): string {
   if (message.includes("cases_slug_check")) return "Slug can only contain lowercase letters, numbers and hyphens.";
   if (message.includes("row-level security")) return "Not allowed — are you still signed in?";
   return message;
+}
+
+/**
+ * A DB error as form state: pinned to the field it's about when we can
+ * tell (unique slug, a range CHECK), otherwise a form-level message.
+ */
+function dbErrorState(message: string): CaseFormState {
+  if (message.includes("cases_slug_key")) {
+    return { error: "Fix 1 field before saving.", fields: { slug: "That slug is already taken." } };
+  }
+  if (message.includes("cases_slug_check")) {
+    return { error: "Fix 1 field before saving.", fields: { slug: friendlyDbError(message) } };
+  }
+  for (const field of ["price", "solve_minutes", "page_count"] as const) {
+    if (message.includes(`cases_${field}_range`)) {
+      return { error: "Fix 1 field before saving.", fields: { [field]: limitMessage(field) } };
+    }
+  }
+  return { error: friendlyDbError(message) };
 }

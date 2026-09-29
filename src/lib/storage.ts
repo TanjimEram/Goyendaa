@@ -8,6 +8,25 @@ export const MEDIA_BUCKET = "case-media";
 /** Private bucket: case + solution PDFs. Stored as object paths. */
 export const FILES_BUCKET = "case-files";
 
+const MB = 1024 * 1024;
+
+/**
+ * Largest single upload per bucket, checked in the browser before any bytes
+ * move. They match the bucket settings in 0001, and 50 MB is also the
+ * Supabase FREE PLAN'S HARD CEILING for any one file — raising it needs the
+ * Pro plan (or moving PDFs to other storage), not a config change.
+ */
+export const MAX_UPLOAD_BYTES: Record<string, number> = {
+  [MEDIA_BUCKET]: 5 * MB,
+  [FILES_BUCKET]: 50 * MB,
+};
+
+/** 78_761_000 → "75.1 MB" */
+export function formatBytes(bytes: number): string {
+  if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 /**
  * Public URLs look like
  *   https://<ref>.supabase.co/storage/v1/object/public/case-media/<path>

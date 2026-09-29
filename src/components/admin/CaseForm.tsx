@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { saveCase, type CaseFormState } from "@/app/admin/(dashboard)/cases/actions";
 import { FileUpload } from "@/components/admin/FileUpload";
 import {
+  CASE_LIMITS,
   RANKS,
   RANK_ORDER,
   RANK_CONTENTS,
   contentsToText,
+  limitMessage,
   defaultDeliveryInfo,
   defaultPurchaseInfo,
+  type LimitedField,
   type Rank,
 } from "@/lib/cases";
 import type { CaseRow } from "@/lib/cases-data";
@@ -20,6 +23,29 @@ import { FILES_BUCKET, MEDIA_BUCKET } from "@/lib/storage";
 const INPUT =
   "mt-2 w-full border border-noir-line bg-noir-raised px-3 py-2.5 font-sans text-sm text-cream outline-none transition-colors duration-300 ease-noir placeholder:text-ash/50 focus:border-brass";
 const LABEL = "block font-mono text-[10px] uppercase tracking-[0.18em] text-ash";
+
+/** Field names shown in the error summary, in form order. */
+const FIELD_LABELS: Record<string, string> = {
+  title: "Title",
+  slug: "Slug",
+  difficulty_rank: "Difficulty rank",
+  price: "Price",
+  solve_minutes: "Solve time",
+  page_count: "Printed pages",
+};
+
+/** Our wording for a native constraint failure, instead of the browser's. */
+function messageFor(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
+  if (el.name in CASE_LIMITS) return limitMessage(el.name as LimitedField);
+  if (el.validity.valueMissing) return `${FIELD_LABELS[el.name] ?? "This field"} is required.`;
+  return el.validationMessage;
+}
+
+/** min/max/step for a limited number input, straight from CASE_LIMITS. */
+function limits(field: LimitedField) {
+  const { min, max } = CASE_LIMITS[field];
+  return { min, max, step: 1, inputMode: "numeric" as const };
+}
 
 function Field({
   label,
@@ -42,7 +68,10 @@ function Field({
       {children}
       {hint && !error && <p className="mt-1.5 text-xs text-ash/80">{hint}</p>}
       {error && (
-        <p className="mt-1.5 border-l-2 border-blood pl-2 font-mono text-[11px] text-cream">
+        <p
+          id={`${name}-error`}
+          className="mt-1.5 border-l-2 border-blood pl-2 font-mono text-[11px] text-cream"
+        >
           {error}
         </p>
       )}
@@ -56,7 +85,49 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
     saveCase,
     {},
   );
-  const f = state.fields ?? {};
+  // Client-side constraint failures, caught from the form's `invalid`
+  // events. The browser's own tooltip is suppressed (it's invisible against
+  // this styling), so without these a blocked submit looked like nothing.
+  const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
+  const firstInvalidSeen = useRef(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  const f: Record<string, string> = { ...(state.fields ?? {}), ...clientErrors };
+  const errorCount = Object.keys(f).length;
+
+  // What the admin typed, echoed by the action after a failed save.
+  const v = (name: string, fallback: string | number) => state.values?.[name] ?? String(fallback);
+  const checked = (name: string, fallback: boolean) =>
+    state.values ? state.values[name] === "on" : fallback;
+
+  // A server-side failure: bring the summary into view.
+  useEffect(() => {
+    if (state.error) summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [state]);
+
+  function onInvalid(e: React.FormEvent<HTMLFormElement>) {
+    const el = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    if (!el.name) return;
+    e.preventDefault();
+    setClientErrors((prev) => ({ ...prev, [el.name]: messageFor(el) }));
+    if (!firstInvalidSeen.current) {
+      firstInvalidSeen.current = true;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.focus({ preventScroll: true });
+    }
+  }
+
+  /** Editing a field clears its client-side error. */
+  function onEdit(e: React.FormEvent<HTMLFormElement>) {
+    const name = (e.target as HTMLInputElement).name;
+    if (name && clientErrors[name]) {
+      setClientErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  }
 
   const [rank, setRank] = useState<Rank>(initial?.difficulty_rank ?? "rookie");
 
@@ -83,7 +154,40 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
   }
 
   return (
-    <form action={action} className="flex flex-col gap-10">
+    <form
+      action={action}
+      onInvalidCapture={onInvalid}
+      onInput={onEdit}
+      className="flex flex-col gap-10"
+    >
+      {errorCount > 0 || state.error ? (
+        <div
+          ref={summaryRef}
+          role="alert"
+          className="border border-blood bg-noir-raised px-5 py-4"
+        >
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-cream">
+            {errorCount > 0
+              ? `Fix ${errorCount} field${errorCount === 1 ? "" : "s"} before saving`
+              : "Couldn’t save"}
+          </p>
+          {errorCount > 0 ? (
+            <ul className="mt-2 flex flex-col gap-1 text-sm text-ash">
+              {Object.entries(f).map(([name, message]) => (
+                <li key={name}>
+                  <a href={`#${name}`} className="text-cream underline decoration-blood underline-offset-4 hover:text-brass">
+                    {FIELD_LABELS[name] ?? name}
+                  </a>{" "}
+                  &mdash; {message}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-ash">{state.error}</p>
+          )}
+        </div>
+      ) : null}
+
       {initial && <input type="hidden" name="id" value={initial.id} />}
       <input type="hidden" name="thumbnail_url" value={thumbnail[0] ?? ""} />
       <input type="hidden" name="gallery_urls" value={JSON.stringify(gallery)} />
@@ -135,7 +239,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="premise"
             name="premise"
             rows={2}
-            defaultValue={initial?.premise ?? ""}
+            defaultValue={v("premise", initial?.premise ?? "")}
             className={INPUT}
           />
         </Field>
@@ -149,7 +253,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="description"
             name="description"
             rows={5}
-            defaultValue={initial?.description ?? ""}
+            defaultValue={v("description", initial?.description ?? "")}
             className={INPUT}
           />
         </Field>
@@ -162,7 +266,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <input
             id="tags"
             name="tags"
-            defaultValue={(initial?.tags ?? []).join(", ")}
+            defaultValue={v("tags", (initial?.tags ?? []).join(", "))}
             className={INPUT}
           />
         </Field>
@@ -195,23 +299,30 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="price"
             name="price"
             type="number"
-            min={0}
-            step={1}
+            {...limits("price")}
             required
-            defaultValue={initial?.price ?? 250}
+            aria-invalid={Boolean(f.price)}
+            aria-describedby={f.price ? "price-error" : undefined}
+            defaultValue={v("price", initial?.price ?? 250)}
             className={`${INPUT} font-mono`}
           />
         </Field>
 
-        <Field label="Solve time (minutes)" name="solve_minutes" error={f.solve_minutes}>
+        <Field
+          label="Solve time (minutes)"
+          name="solve_minutes"
+          error={f.solve_minutes}
+          hint={`${CASE_LIMITS.solve_minutes.min}–${CASE_LIMITS.solve_minutes.max}, any whole number.`}
+        >
           <input
             id="solve_minutes"
             name="solve_minutes"
             type="number"
-            min={1}
-            step={5}
+            {...limits("solve_minutes")}
             required
-            defaultValue={initial?.solve_minutes ?? 60}
+            aria-invalid={Boolean(f.solve_minutes)}
+            aria-describedby={f.solve_minutes ? "solve_minutes-error" : undefined}
+            defaultValue={v("solve_minutes", initial?.solve_minutes ?? 60)}
             className={`${INPUT} font-mono`}
           />
         </Field>
@@ -221,10 +332,11 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="page_count"
             name="page_count"
             type="number"
-            min={0}
-            step={1}
+            {...limits("page_count")}
             required
-            defaultValue={initial?.page_count ?? 0}
+            aria-invalid={Boolean(f.page_count)}
+            aria-describedby={f.page_count ? "page_count-error" : undefined}
+            defaultValue={v("page_count", initial?.page_count ?? 20)}
             className={`${INPUT} font-mono`}
           />
         </Field>
@@ -242,7 +354,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="contents_text"
             name="contents_text"
             rows={8}
-            defaultValue={contentsToText(initial?.contents ?? [])}
+            defaultValue={v("contents_text", contentsToText(initial?.contents ?? []))}
             placeholder={contentsToText(RANK_CONTENTS[rank])}
             className={`${INPUT} font-mono text-xs leading-relaxed`}
           />
@@ -267,7 +379,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="purchase_info"
             name="purchase_info"
             rows={4}
-            defaultValue={initial?.purchase_info ?? ""}
+            defaultValue={v("purchase_info", initial?.purchase_info ?? "")}
             placeholder={defaultPurchaseInfo()}
             className={INPUT}
           />
@@ -282,7 +394,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
             id="delivery_info"
             name="delivery_info"
             rows={4}
-            defaultValue={initial?.delivery_info ?? ""}
+            defaultValue={v("delivery_info", initial?.delivery_info ?? "")}
             placeholder={defaultDeliveryInfo(rank)}
             className={INPUT}
           />
@@ -296,7 +408,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <input
             id="player_note"
             name="player_note"
-            defaultValue={initial?.player_note ?? ""}
+            defaultValue={v("player_note", initial?.player_note ?? "")}
             className={INPUT}
           />
         </Field>
@@ -309,7 +421,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <input
             id="content_note"
             name="content_note"
-            defaultValue={initial?.content_note ?? ""}
+            defaultValue={v("content_note", initial?.content_note ?? "")}
             className={INPUT}
           />
         </Field>
@@ -387,7 +499,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <input
             type="checkbox"
             name="published"
-            defaultChecked={initial?.published ?? false}
+            defaultChecked={checked("published", initial?.published ?? false)}
             className="h-4 w-4 accent-[var(--color-brass)]"
           />
           <span>
@@ -401,7 +513,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
           <input
             type="checkbox"
             name="featured"
-            defaultChecked={initial?.featured ?? false}
+            defaultChecked={checked("featured", initial?.featured ?? false)}
             className="h-4 w-4 accent-[var(--color-brass)]"
           />
           <span>
@@ -413,16 +525,14 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
         </label>
       </section>
 
-      {state.error && (
-        <p role="alert" className="border-l-2 border-blood pl-3 font-mono text-[11px] text-cream">
-          {state.error}
-        </p>
-      )}
-
       <div className="flex flex-wrap items-center gap-4">
         <button
           type="submit"
           disabled={pending}
+          onClick={() => {
+            firstInvalidSeen.current = false;
+            setClientErrors({});
+          }}
           className="bg-blood px-6 py-3 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-blood-hot disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Saving…" : initial ? "Save changes" : "Create case"}

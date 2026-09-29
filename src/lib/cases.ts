@@ -223,6 +223,34 @@ export function contentsToText(items: ContentItem[]): string {
 /** Catalogue rank order, used for the filter bar and difficulty sort. */
 export const RANK_ORDER: Rank[] = ["rookie", "senior", "master"];
 
+/**
+ * Numeric limits for the admin case form. The form's min/max/step, the
+ * server action and the DB CHECK constraints (0006) all use these values —
+ * change them here and in the migration together.
+ *
+ * Step is always 1: the browser counts steps from `min`, so `min=1 step=5`
+ * silently rejected 240 (valid values were 1, 6, … 236, 241).
+ */
+export const CASE_LIMITS = {
+  price: { min: 0, max: 100_000, label: "Price", unit: "৳" },
+  solve_minutes: { min: 15, max: 1_440, label: "Solve time", unit: "minutes" },
+  page_count: { min: 1, max: 1_000, label: "Printed pages", unit: "pages" },
+} as const;
+
+export type LimitedField = keyof typeof CASE_LIMITS;
+
+/** "Solve time must be between 15 and 1440 minutes." */
+export function limitMessage(field: LimitedField): string {
+  const { min, max, label, unit } = CASE_LIMITS[field];
+  return `${label} must be a whole number between ${min} and ${max}${unit === "৳" ? "" : ` ${unit}`}.`;
+}
+
+/** Whole number inside the field's range. */
+export function withinLimit(field: LimitedField, n: number): boolean {
+  const { min, max } = CASE_LIMITS[field];
+  return Number.isInteger(n) && n >= min && n <= max;
+}
+
 export function isRank(value: unknown): value is Rank {
   return typeof value === "string" && value in RANKS;
 }
