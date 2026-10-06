@@ -17,6 +17,7 @@ import {
   formatTaka,
   getCaseContents,
   getPreviewDocs,
+  formatSolveTime,
   getRelatedCases,
 } from "@/lib/cases";
 import { getPublishedCase, getPublishedCases } from "@/lib/cases-data";
@@ -139,8 +140,7 @@ export default async function CaseDetailPage({
                 </p>
 
                 <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
-                  {rank.timeRange} &middot; {rank.suspects} &middot;{" "}
-                  {caseFile.pages} printed pages
+                  ~{formatSolveTime(caseFile.solveMinutes)} &middot; {caseFile.pages} printed pages
                   {caseFile.playerNote && <> &middot; {caseFile.playerNote}</>}
                 </p>
                 {caseFile.contentNote && (
