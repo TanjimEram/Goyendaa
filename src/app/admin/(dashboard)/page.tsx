@@ -32,7 +32,7 @@ export default async function AdminCasesPage() {
             {cases.length} file{cases.length === 1 ? "" : "s"} on record
           </h1>
           <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
-            {published} published &middot; shown in catalogue order
+            {published} published &middot; grouped by rank, in catalogue order
           </p>
         </div>
         <Link

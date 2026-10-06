@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { reorderCases } from "@/app/admin/(dashboard)/cases/actions";
 import { DeleteCaseButton } from "@/components/admin/DeleteCaseButton";
-import { RANKS, formatTaka } from "@/lib/cases";
+import { RANKS, RANK_ORDER, formatTaka, type Rank } from "@/lib/cases";
 import type { CaseRow } from "@/lib/cases-data";
 
 /** Just what the table renders — keeps the client payload small. */
@@ -35,43 +35,61 @@ function move<T>(list: T[], from: number, to: number): T[] {
   return next;
 }
 
+type Groups = Record<Rank, CaseListItem[]>;
+
+/** Split the list by rank, keeping catalogue order inside each rank. */
+function byRank(items: CaseListItem[]): Groups {
+  return Object.fromEntries(
+    RANK_ORDER.map((r) => [r, items.filter((c) => c.difficulty_rank === r)]),
+  ) as Groups;
+}
+
+const flat = (g: Groups) => RANK_ORDER.flatMap((r) => g[r]);
+
 /**
- * The /admin case list. Rows can be dragged (mouse) or nudged with the
- * arrow buttons (touch, keyboard). Nothing is written until "Save order".
+ * The /admin case list, one section per rank. Rows can be dragged (mouse)
+ * or nudged with the arrow buttons (touch, keyboard) within their rank.
+ * Nothing is written until "Save order", which stores the catalogue as
+ * Rookie → Senior → Master.
  */
 export function CaseTable({ initial }: { initial: CaseListItem[] }) {
-  const [rows, setRows] = useState(initial);
-  const [saved, setSaved] = useState(initial);
+  const [groups, setGroups] = useState(() => byRank(initial));
+  const [saved, setSaved] = useState(groups);
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const dirty = rows.some((r, i) => r.id !== saved[i]?.id);
+  const savedIds = flat(saved).map((r) => r.id);
+  const dirty = flat(groups).some((r, i) => r.id !== savedIds[i]);
 
-  function indexOf(id: string) {
-    return rows.findIndex((r) => r.id === id);
+  function moveIn(rank: Rank, from: number, to: number) {
+    setGroups((g) => ({ ...g, [rank]: move(g[rank], from, to) }));
   }
 
-  function dropOn(targetId: string) {
+  /** Drops only reorder within a rank; the rank itself is set in the form. */
+  function dropOn(rank: Rank, targetId: string) {
     if (!dragging || dragging === targetId) return;
-    setRows((r) => move(r, indexOf(dragging), indexOf(targetId)));
+    const list = groups[rank];
+    const from = list.findIndex((r) => r.id === dragging);
+    if (from === -1) return;
+    moveIn(rank, from, list.findIndex((r) => r.id === targetId));
   }
 
   function save() {
     setError(null);
     startTransition(async () => {
-      const result = await reorderCases(rows.map((r) => r.id));
+      const result = await reorderCases(flat(groups).map((r) => r.id));
       if (result.error) {
         setError(result.error);
         return;
       }
-      setSaved(rows);
+      setSaved(groups);
     });
   }
 
   function reset() {
-    setRows(saved);
+    setGroups(saved);
     setError(null);
   }
 
@@ -83,7 +101,7 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
           {dirty ? (
             <span className="text-brass">Order changed &middot; not saved</span>
           ) : (
-            <>Drag rows, or use the arrows, to set catalogue order</>
+            <>Drag rows, or use the arrows, to set the order within each rank</>
           )}
         </p>
         <div className="flex items-center gap-2">
@@ -117,14 +135,42 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
             <tr>
               <th className="w-24 px-4 py-3 font-normal">Order</th>
               <th className="px-4 py-3 font-normal">Case</th>
-              <th className="px-4 py-3 font-normal">Rank</th>
               <th className="px-4 py-3 font-normal">Price</th>
               <th className="px-4 py-3 font-normal">PDFs</th>
               <th className="px-4 py-3 font-normal">Status</th>
               <th className="px-4 py-3 text-right font-normal">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-noir-line">
+          {RANK_ORDER.map((rank) => {
+            const rows = groups[rank];
+            return (
+          <tbody key={rank} className="divide-y divide-noir-line border-t border-noir-line">
+            <tr className="bg-noir-raised/40">
+              <th colSpan={6} scope="rowgroup" className="px-4 py-3 text-left font-normal">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p>
+                    <span className="font-display text-lg text-cream">{RANKS[rank].label}</span>
+                    <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
+                      {rows.length} case{rows.length === 1 ? "" : "s"} &middot; solution +
+                      {RANKS[rank].solutionDelayHours}h
+                    </span>
+                  </p>
+                  <Link
+                    href={`/admin/cases/new?rank=${rank}`}
+                    className={`${BTN} text-brass hover:border-brass`}
+                  >
+                    + New {RANKS[rank].label} case
+                  </Link>
+                </div>
+              </th>
+            </tr>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-5 font-mono text-[10px] uppercase tracking-[0.14em] text-ash">
+                  No {RANKS[rank].label} cases yet.
+                </td>
+              </tr>
+            )}
             {rows.map((c, i) => {
               const isDragging = dragging === c.id;
               const isOver = over === c.id && dragging !== c.id;
@@ -152,7 +198,7 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
-                    dropOn(c.id);
+                    dropOn(rank, c.id);
                     setOver(null);
                     setDragging(null);
                   }}
@@ -175,7 +221,7 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
                           type="button"
                           aria-label={`Move ${c.title} up`}
                           disabled={i === 0}
-                          onClick={() => setRows((r) => move(r, i, i - 1))}
+                          onClick={() => moveIn(rank, i, i - 1)}
                           className="px-1 font-mono text-[10px] leading-none text-ash hover:text-cream disabled:opacity-25"
                         >
                           ▲
@@ -184,7 +230,7 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
                           type="button"
                           aria-label={`Move ${c.title} down`}
                           disabled={i === rows.length - 1}
-                          onClick={() => setRows((r) => move(r, i, i + 1))}
+                          onClick={() => moveIn(rank, i, i + 1)}
                           className="px-1 font-mono text-[10px] leading-none text-ash hover:text-cream disabled:opacity-25"
                         >
                           ▼
@@ -214,9 +260,6 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.12em] text-brass">
-                    {RANKS[c.difficulty_rank]?.label ?? c.difficulty_rank}
-                  </td>
                   <td className="px-4 py-3 font-mono text-cream">{formatTaka(c.price)}</td>
                   <td className="px-4 py-3 font-mono text-[10px] uppercase tracking-[0.12em]">
                     <span className={c.case_pdf_path ? "text-cream" : "text-ash/50"}>case</span>
@@ -249,6 +292,8 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
               );
             })}
           </tbody>
+            );
+          })}
         </table>
       </div>
     </div>

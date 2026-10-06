@@ -80,7 +80,7 @@ function Field({
 }
 
 /** Create when `initial` is undefined; edit otherwise. */
-export function CaseForm({ initial }: { initial?: CaseRow }) {
+export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultRank?: Rank }) {
   const [state, action, pending] = useActionState<CaseFormState, FormData>(
     saveCase,
     {},
@@ -129,7 +129,7 @@ export function CaseForm({ initial }: { initial?: CaseRow }) {
     }
   }
 
-  const [rank, setRank] = useState<Rank>(initial?.difficulty_rank ?? "rookie");
+  const [rank, setRank] = useState<Rank>(initial?.difficulty_rank ?? defaultRank ?? "rookie");
 
   // Slug follows the title until the admin edits it by hand.
   const [title, setTitle] = useState(initial?.title ?? "");
