@@ -16,6 +16,12 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 
 ---
 
+## Case content (Goyenda Studio)
+
+Case PDFs are built in the sibling repo **`../Goyenda-Studio`**, not here. **When creating, editing or shortening any Goyenda case, read and follow `../Goyenda-Studio/docs/CASE_RULES.md`** (length per tier, one page per document, word limits, merge and clue rules), plus that repo's `CLAUDE.md`.
+
+---
+
 ## Audience & commercial constraints
 
 - **Primary market: Bangladesh.** Prices display in BDT (`৳`). Checkout must eventually support **bKash / Nagad**, not just cards.
