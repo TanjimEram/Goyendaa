@@ -134,6 +134,33 @@ export async function submitOrder(
   return data as OrderRow;
 }
 
+/** True when another pending/paid order already used this bKash TrxID. */
+export async function trxidInUse(trxId: string, exceptOrderId: string): Promise<boolean> {
+  const supabase = await createServiceClient();
+  const { count, error } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("submitted_trxid", trxId)
+    .in("status", ["pending", "paid"])
+    .neq("id", exceptOrderId);
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+/** Orders submitted in the last `minutes`, optionally for one email. Used
+ *  to stop a script from flooding the admin inbox through the checkout. */
+export async function recentSubmissions(minutes: number, email?: string): Promise<number> {
+  const supabase = await createServiceClient();
+  let query = supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .gte("submitted_at", new Date(Date.now() - minutes * 60_000).toISOString());
+  if (email) query = query.eq("buyer_email", email);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
 /** For the buyer's status page. Token is the only credential. */
 export async function getOrderByToken(token: string): Promise<OrderWithCase | null> {
   if (!/^[0-9a-f-]{36}$/i.test(token)) return null;
@@ -224,32 +251,66 @@ export async function getDueSolutionOrders(limit = 25): Promise<OrderWithCase[]>
   return data as OrderWithCase[];
 }
 
+/**
+ * Deletes reservations nobody completed (no name, email or TrxID) after
+ * `days`. Bots following "Buy" links create one per visit; this keeps the
+ * table and the order-code space clean. Returns how many went.
+ */
+export async function purgeStaleReservations(days = 3): Promise<number> {
+  const supabase = await createServiceClient();
+  const { data, error } = await supabase
+    .from("orders")
+    .delete()
+    .eq("status", "started")
+    .lt("created_at", new Date(Date.now() - days * 86_400_000).toISOString())
+    .select("id");
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 /** After the cap the cron stops retrying and the admin has to step in. */
 export const MAX_SOLUTION_ATTEMPTS = 5;
 
-export async function markSolutionSent(orderId: string, attempts: number): Promise<void> {
+/**
+ * Claims one send attempt before any email goes out: bumps
+ * `solution_attempts` only if nobody else has since the row was read
+ * (optimistic lock on the counter). Two overlapping cron runs, or a cron
+ * tick racing the admin's "send now", can therefore never both send.
+ * `unsentOnly` is the cron's rule; the admin's resend may re-send.
+ */
+export async function claimSolutionSend(
+  orderId: string,
+  attempts: number,
+  unsentOnly: boolean,
+): Promise<boolean> {
+  const supabase = await createServiceClient();
+  let query = supabase
+    .from("orders")
+    .update({ solution_attempts: attempts + 1 })
+    .eq("id", orderId)
+    .eq("solution_attempts", attempts);
+  if (unsentOnly) query = query.eq("solution_sent", false);
+  const { data, error } = await query.select("id");
+  if (error) throw error;
+  return Boolean(data?.length);
+}
+
+/** After a claimed attempt succeeded. */
+export async function markSolutionSent(orderId: string): Promise<void> {
   const supabase = await createServiceClient();
   const { error } = await supabase
     .from("orders")
-    .update({
-      solution_sent: true,
-      solution_sent_at: new Date().toISOString(),
-      solution_attempts: attempts + 1,
-      solution_error: null,
-    })
+    .update({ solution_sent: true, solution_sent_at: new Date().toISOString(), solution_error: null })
     .eq("id", orderId);
   if (error) throw error;
 }
 
-export async function markSolutionFailed(
-  orderId: string,
-  attempts: number,
-  reason: string,
-): Promise<void> {
+/** After a claimed attempt failed; the claim already counted it. */
+export async function markSolutionFailed(orderId: string, reason: string): Promise<void> {
   const supabase = await createServiceClient();
   const { error } = await supabase
     .from("orders")
-    .update({ solution_attempts: attempts + 1, solution_error: reason.slice(0, 300) })
+    .update({ solution_error: reason.slice(0, 300) })
     .eq("id", orderId);
   if (error) throw error;
 }

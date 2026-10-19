@@ -4,6 +4,7 @@ import { RANKS } from "@/lib/cases";
 import { adminSolutionFailedMail, buyerSolutionMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
 import {
+  claimSolutionSend,
   getDueSolutionOrders,
   getOrderByIdService,
   markSolutionFailed,
@@ -45,15 +46,17 @@ export async function sendDueSolutions(limit = 25): Promise<SolutionRunResult> {
   const result: SolutionRunResult = { due: orders.length, sent: [], failed: [] };
 
   for (const order of orders) {
+    // Another run (or the admin's resend) got there first: skip, don't send.
+    if (!(await claimSolutionSend(order.id, order.solution_attempts, true))) continue;
     const reason = await deliver(order);
     if (reason) {
       result.failed.push({ order: order.order_code, reason });
-      await markSolutionFailed(order.id, order.solution_attempts, reason);
+      await markSolutionFailed(order.id, reason);
       // Tell the admin once, on the first failure, so it isn't silent.
       if (order.solution_attempts === 0) await alertAdmin(order, reason);
     } else {
       result.sent.push(order.order_code);
-      await markSolutionSent(order.id, order.solution_attempts);
+      await markSolutionSent(order.id);
     }
   }
 
@@ -75,12 +78,15 @@ export async function sendSolutionNow(
     return { ok: false, error: `Order is ${order.status} — only paid orders have a solution.` };
   }
 
+  if (!(await claimSolutionSend(order.id, order.solution_attempts, false))) {
+    return { ok: false, error: "Another send for this order is in progress — refresh and check before trying again." };
+  }
   const reason = await deliver(order);
   if (reason) {
-    await markSolutionFailed(order.id, order.solution_attempts, reason);
+    await markSolutionFailed(order.id, reason);
     return { ok: false, error: reason };
   }
-  await markSolutionSent(order.id, order.solution_attempts);
+  await markSolutionSent(order.id);
   return { ok: true };
 }
 
