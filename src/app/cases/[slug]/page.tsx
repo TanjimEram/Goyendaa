@@ -30,9 +30,13 @@ export async function generateMetadata({
   const { slug } = await params;
   const caseFile = await getPublishedCase(slug);
   if (!caseFile) return { title: "Case not found" };
+  const images = caseFile.thumbnail ? [{ url: caseFile.thumbnail, width: 1920, height: 1080, alt: caseFile.title }] : undefined;
   return {
     title: `${caseFile.title}`,
     description: caseFile.premise,
+    // Without these, shared case links show the site-wide title and image.
+    openGraph: { title: `${caseFile.title} — Goyenda`, description: caseFile.premise, url: `/cases/${caseFile.slug}`, ...(images ? { images } : {}) },
+    twitter: { card: "summary_large_image", title: `${caseFile.title} — Goyenda`, description: caseFile.premise, ...(images ? { images: images.map((i) => i.url) } : {}) },
   };
 }
 
