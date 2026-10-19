@@ -50,7 +50,10 @@ export async function approveOrder(
   const approvedAt = new Date();
   const sendAt = solutionSendAt(order.case.difficulty_rank, approvedAt);
 
-  const { error } = await supabase
+  // Conditional on still being pending, and we check that THIS call made the
+  // change: a double click or two admins racing must not re-send the email
+  // or move the solution clock.
+  const { data: changed, error } = await supabase
     .from("orders")
     .update({
       status: "paid",
@@ -58,8 +61,10 @@ export async function approveOrder(
       solution_send_at: sendAt.toISOString(),
     })
     .eq("id", id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
   if (error) return { error: error.message };
+  if (!changed?.length) return { error: "Order was already approved or rejected — nothing changed." };
 
   refresh();
 
