@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buyerOrderApprovedMail, sendMail } from "@/lib/email";
-import { RANKS } from "@/lib/cases";
 import { formatDateTimeBD } from "@/lib/orders";
-import { getOrderByIdAdmin, solutionSendAt } from "@/lib/orders-data";
+import { caseDelayHours, getOrderByIdAdmin, solutionSendAt } from "@/lib/orders-data";
 import { sendSolutionNow } from "@/lib/solutions";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
@@ -48,7 +47,8 @@ export async function approveOrder(
   }
 
   const approvedAt = new Date();
-  const sendAt = solutionSendAt(order.case.difficulty_rank, approvedAt);
+  const delayHours = caseDelayHours(order.case);
+  const sendAt = solutionSendAt(delayHours, approvedAt);
 
   // Conditional on still being pending, and we check that THIS call made the
   // change: a double click or two admins racing must not re-send the email
@@ -68,7 +68,6 @@ export async function approveOrder(
 
   refresh();
 
-  const rank = RANKS[order.case.difficulty_rank];
   const mail = buyerOrderApprovedMail(
     {
       orderCode: order.order_code,
@@ -83,7 +82,7 @@ export async function approveOrder(
     {
       downloadUrl: `${SITE.url}/orders/${order.access_token}`,
       solutionAtText: formatDateTimeBD(sendAt.toISOString()),
-      solutionDelayHours: rank.solutionDelayHours,
+      solutionDelayHours: delayHours,
       downloadWindowDays: SITE.downloadWindowDays,
     },
   );

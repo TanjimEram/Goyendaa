@@ -1,6 +1,7 @@
 import "server-only";
 
 import { serverEnv } from "@/lib/env";
+import { formatHours } from "@/lib/cases";
 import { SITE } from "@/lib/site";
 
 /**
@@ -206,7 +207,7 @@ The sealed solution to ${o.caseTitle} is here: ${opts.solutionUrl}
 Read it only once everyone has named a suspect. Order ${o.orderCode}.`,
     html: shell(
       "Time's up.",
-      `<p>The sealed solution to <strong style="color:#efe6d5">${esc(o.caseTitle)}</strong> is unlocked &mdash; ${opts.heldHours} hour${opts.heldHours === 1 ? "" : "s"} after your payment was confirmed, exactly as promised.</p>
+      `<p>The sealed solution to <strong style="color:#efe6d5">${esc(o.caseTitle)}</strong> is unlocked &mdash; ${formatHours(opts.heldHours)} after your payment was confirmed, exactly as promised.</p>
 ${button(opts.solutionUrl, "Read the solution")}
 <p style="font-size:13px;">Open it only once everyone at the table has committed to a suspect. There's no going back.</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;">
@@ -251,7 +252,7 @@ export function buyerOrderApprovedMail(
 ): Omit<Mail, "to"> {
   return {
     subject: `Your case file is ready — ${o.caseTitle} (${o.orderCode})`,
-    text: `Payment confirmed, ${o.buyerName}.\n\nDownload ${o.caseTitle}: ${opts.downloadUrl}\n(Link works for ${opts.downloadWindowDays} days.)\n\nThe solution will be emailed to this address at ${opts.solutionAtText} — ${opts.solutionDelayHours} hour(s) from confirmation. It isn't in the download.\n\nOrder ${o.orderCode}.`,
+    text: `Payment confirmed, ${o.buyerName}.\n\nDownload ${o.caseTitle}: ${opts.downloadUrl}\n(Link works for ${opts.downloadWindowDays} days.)\n\nThe solution will be emailed to this address at ${opts.solutionAtText} — ${formatHours(opts.solutionDelayHours)} from confirmation. It isn't in the download.\n\nOrder ${o.orderCode}.`,
     html: shell(
       "The file is yours.",
       `<p>Payment confirmed, ${esc(o.buyerName)}. <strong>${esc(o.caseTitle)}</strong> is ready.</p>
@@ -261,7 +262,7 @@ ${button(opts.downloadUrl, "Download case file")}
 ${row("Order", esc(o.orderCode))}
 ${row("Solution", `<strong>${esc(opts.solutionAtText)}</strong> Bangladesh time`)}
 </table>
-<p>The sealed solution arrives by email <strong>${opts.solutionDelayHours} hour${opts.solutionDelayHours === 1 ? "" : "s"} from now</strong>. It isn't in the download, so there's nothing to peek at. Commit to a suspect before it lands.</p>`,
+<p>The sealed solution arrives by email <strong>${formatHours(opts.solutionDelayHours)} from now</strong>. It isn't in the download, so there's nothing to peek at. Commit to a suspect before it lands.</p>`,
     ),
   };
 }

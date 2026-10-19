@@ -5,9 +5,9 @@ import { DifficultyBadge } from "@/components/CaseCard";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SolutionCountdown } from "@/components/SolutionCountdown";
-import { RANKS, formatTaka } from "@/lib/cases";
+import { formatHours, formatTaka } from "@/lib/cases";
 import { formatDateTimeBD, formatTimeBD } from "@/lib/orders";
-import { getOrderByToken } from "@/lib/orders-data";
+import { getOrderByToken, heldHours } from "@/lib/orders-data";
 import { SITE } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
   if (!order) notFound();
 
   const c = order.case;
-  const rank = RANKS[c.difficulty_rank];
+  const held = formatHours(heldHours(order));
   const code = `CASE ${String(c.case_number).padStart(3, "0")}`;
   const solutionReady =
     order.status === "paid" &&
@@ -163,8 +163,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
                       The solution is unsealed.
                     </h2>
                     <p className="mt-3 text-sm leading-[1.7] text-ash">
-                      Held {rank.solutionDelayHours} hour
-                      {rank.solutionDelayHours === 1 ? "" : "s"}, as promised
+                      Held {held}, as promised
                       {order.solution_sent && (
                         <>
                           {" "}&mdash; a copy is in{" "}
@@ -194,8 +193,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
                       .
                     </h2>
                     <p className="mt-3 text-sm leading-[1.7] text-ash">
-                      {rank.label} files are held for {rank.solutionDelayHours} hour
-                      {rank.solutionDelayHours === 1 ? "" : "s"} from the moment we confirmed
+                      This file is held for {held} from the moment we confirmed
                       your payment. We&rsquo;ll email the sealed solution to{" "}
                       <span className="text-cream">{order.buyer_email}</span>
                       {order.solution_send_at && (

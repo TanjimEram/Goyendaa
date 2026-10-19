@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { OrderReview, type PendingOrderItem } from "@/components/admin/OrderReview";
-import { getPendingOrdersAdmin } from "@/lib/orders-data";
+import { caseDelayHours, getPendingOrdersAdmin } from "@/lib/orders-data";
 
 export const metadata = { title: "Pending orders" };
 
@@ -18,6 +18,7 @@ export default async function PendingOrdersPage() {
     case_title: o.case.title,
     case_code: `CASE ${String(o.case.case_number).padStart(3, "0")}`,
     case_rank: o.case.difficulty_rank,
+    delay_hours: caseDelayHours(o.case),
     has_pdf: Boolean(o.case.case_pdf_path),
   }));
 

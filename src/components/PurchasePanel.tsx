@@ -4,7 +4,9 @@ import {
   RANKS,
   defaultDeliveryInfo,
   defaultPurchaseInfo,
+  formatHoursShort,
   formatSolveTime,
+  solutionDelayHours,
   formatTaka,
   toLines,
   type CaseFile,
@@ -16,7 +18,7 @@ export function buyingLines(caseFile: CaseFile): string[] {
   const delivery = toLines(caseFile.deliveryInfo);
   return [
     ...(purchase.length ? purchase : toLines(defaultPurchaseInfo())),
-    ...(delivery.length ? delivery : toLines(defaultDeliveryInfo(caseFile.rank))),
+    ...(delivery.length ? delivery : toLines(defaultDeliveryInfo(caseFile.rank, caseFile.solutionDelayHours))),
   ];
 }
 
@@ -65,7 +67,7 @@ export function PurchasePanel({ caseFile }: { caseFile: CaseFile }) {
         </div>
         <div>
           <dt className="text-ash">Solution</dt>
-          <dd className="mt-1 text-cream">+{rank.solutionDelayHours}h</dd>
+          <dd className="mt-1 text-cream">+{formatHoursShort(solutionDelayHours(caseFile.rank, caseFile.solutionDelayHours))}</dd>
         </div>
       </dl>
 

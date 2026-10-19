@@ -1,12 +1,12 @@
 import "server-only";
 
-import { RANKS } from "@/lib/cases";
 import { adminSolutionFailedMail, buyerSolutionMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
 import {
   claimSolutionSend,
   getDueSolutionOrders,
   getOrderByIdService,
+  heldHours,
   markSolutionFailed,
   markSolutionSent,
   type OrderWithCase,
@@ -101,7 +101,7 @@ async function deliver(order: OrderWithCase): Promise<string | undefined> {
     to: order.buyer_email,
     ...buyerSolutionMail(mailInfo(order), {
       solutionUrl: `${SITE.url}/orders/${order.access_token}/solution`,
-      heldHours: RANKS[order.case.difficulty_rank].solutionDelayHours,
+      heldHours: heldHours(order),
     }),
   });
   return sent.ok ? undefined : (sent.error ?? "email send failed");

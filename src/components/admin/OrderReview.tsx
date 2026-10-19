@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { approveOrder, rejectOrder, type OrderActionState } from "@/app/admin/(dashboard)/orders/actions";
 import { CopyButton } from "@/components/CopyButton";
-import { RANKS, formatTaka, type Rank } from "@/lib/cases";
+import { RANKS, formatHoursShort, formatTaka, type Rank } from "@/lib/cases";
 import { formatDateTimeBD } from "@/lib/orders";
 
 export interface PendingOrderItem {
@@ -17,6 +17,8 @@ export interface PendingOrderItem {
   case_title: string;
   case_code: string;
   case_rank: Rank;
+  /** What approving now will set the solution clock to. */
+  delay_hours: number;
   has_pdf: boolean;
 }
 
@@ -66,8 +68,8 @@ export function OrderReview({ order }: { order: PendingOrderItem }) {
           </p>
           <p className="mt-1 text-ash">
             {order.case_code} &middot; {order.case_title} &middot;{" "}
-            <span className="text-brass">{RANKS[order.case_rank].label}</span> (+
-            {RANKS[order.case_rank].solutionDelayHours}h)
+            <span className="text-brass">{RANKS[order.case_rank].label}</span> (solution +
+            {formatHoursShort(order.delay_hours)})
           </p>
           {!order.has_pdf && (
             <p className="mt-2 border-l-2 border-blood pl-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cream">

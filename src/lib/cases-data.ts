@@ -27,6 +27,8 @@ export interface CaseRow {
   content_note: string | null;
   tags: string[];
   solve_minutes: number;
+  /** NULL = the rank's default. */
+  solution_delay_hours: number | null;
   page_count: number;
   created_at: string;
   updated_at: string;
@@ -35,7 +37,7 @@ export interface CaseRow {
 /** The columns the public site needs. Listed explicitly so the PDF paths
  *  never travel to the public pages by accident. */
 const PUBLIC_COLUMNS =
-  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, page_count, purchase_info, delivery_info, contents, player_note, content_note";
+  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, solution_delay_hours, page_count, purchase_info, delivery_info, contents, player_note, content_note";
 
 /** DB row → the shape every component already renders. */
 export function rowToCaseFile(row: CaseRow): CaseFile {
@@ -48,6 +50,9 @@ export function rowToCaseFile(row: CaseRow): CaseFile {
     hook: row.description,
     rank: isRank(row.difficulty_rank) ? row.difficulty_rank : "rookie",
     solveMinutes: row.solve_minutes,
+    // PostgREST may send numeric as a string.
+    solutionDelayHours:
+      row.solution_delay_hours == null ? undefined : Number(row.solution_delay_hours),
     pages: row.page_count,
     priceBdt: row.price,
     tags: row.tags ?? [],

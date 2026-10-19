@@ -7,7 +7,7 @@ import { CheckoutForm } from "@/components/CheckoutForm";
 import { CopyButton } from "@/components/CopyButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { RANKS, formatTaka } from "@/lib/cases";
+import { formatHours, formatTaka, solutionDelayHours } from "@/lib/cases";
 import { getPublishedCase } from "@/lib/cases-data";
 import { orderEnv } from "@/lib/env";
 import { findOrCreateStartedOrder } from "@/lib/orders-data";
@@ -49,7 +49,7 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[slu
   const order = await findOrCreateStartedOrder(session, caseFile.id, caseFile.priceBdt);
   const { bkashNumber } = await orderEnv();
 
-  const rank = RANKS[caseFile.rank];
+  const delay = formatHours(solutionDelayHours(caseFile.rank, caseFile.solutionDelayHours));
   const price = formatTaka(caseFile.priceBdt);
 
   return (
@@ -148,8 +148,7 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[slu
                     Name, email, the TrxID and the order code. We check every payment
                     by hand against the bKash app &mdash; {SITE.confirmationWindow}.
                     Once it&rsquo;s confirmed you&rsquo;ll get your download link by
-                    email, and the solution follows {rank.solutionDelayHours} hour
-                    {rank.solutionDelayHours === 1 ? "" : "s"} after that.
+                    email, and the solution follows {delay} after that.
                   </p>
                 </Step>
               </ol>

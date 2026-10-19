@@ -1,6 +1,6 @@
 import "server-only";
 
-import { RANKS, type Rank } from "@/lib/cases";
+import { solutionDelayHours, type Rank } from "@/lib/cases";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 export type OrderStatus = "started" | "pending" | "paid" | "rejected";
@@ -37,13 +37,14 @@ export interface OrderWithCase extends OrderRow {
     slug: string;
     title: string;
     difficulty_rank: Rank;
+    solution_delay_hours: number | null;
     case_pdf_path: string | null;
     solution_pdf_path: string | null;
   };
 }
 
 const CASE_JOIN =
-  "case:cases(id, case_number, slug, title, difficulty_rank, case_pdf_path, solution_pdf_path)";
+  "case:cases(id, case_number, slug, title, difficulty_rank, solution_delay_hours, case_pdf_path, solution_pdf_path)";
 
 // ── Order codes ─────────────────────────────────────────────────────────
 
@@ -315,7 +316,25 @@ export async function markSolutionFailed(orderId: string, reason: string): Promi
   if (error) throw error;
 }
 
+/** Effective delay for an order's case: its own hours, else the rank's. */
+export function caseDelayHours(c: OrderWithCase["case"]): number {
+  return solutionDelayHours(
+    c.difficulty_rank,
+    c.solution_delay_hours == null ? null : Number(c.solution_delay_hours),
+  );
+}
+
 /** The solution clock starts at approval — never at download. */
-export function solutionSendAt(rank: Rank, approvedAt: Date): Date {
-  return new Date(approvedAt.getTime() + RANKS[rank].solutionDelayHours * 3_600_000);
+export function solutionSendAt(delayHours: number, approvedAt: Date): Date {
+  return new Date(approvedAt.getTime() + Math.round(delayHours * 3_600_000));
+}
+
+/** The delay this order was actually given, from its own timestamps — so
+ *  editing the case later never rewrites what an earlier buyer was told. */
+export function heldHours(order: OrderWithCase): number {
+  if (order.approved_at && order.solution_send_at) {
+    const ms = Date.parse(order.solution_send_at) - Date.parse(order.approved_at);
+    return Math.round(ms / 36_000) / 100;
+  }
+  return caseDelayHours(order.case);
 }

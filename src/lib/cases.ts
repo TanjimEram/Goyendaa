@@ -129,6 +129,9 @@ export interface CaseFile {
   rank: Rank;
   /** Rough time to work the case, in minutes. */
   solveMinutes: number;
+  /** Hours from approval to the solution email. Absent = the rank's default;
+   *  read it through `solutionDelayHours()`. */
+  solutionDelayHours?: number;
   /** Pages in the printable evidence pack. */
   pages: number;
   /** Price in BDT. Displayed with the ৳ sign. */
@@ -173,10 +176,10 @@ export function defaultPurchaseInfo(): string {
   ].join("\n");
 }
 
-export function defaultDeliveryInfo(rank: Rank): string {
-  const h = RANKS[rank].solutionDelayHours;
+export function defaultDeliveryInfo(rank: Rank, override?: number | null): string {
+  const h = formatHours(solutionDelayHours(rank, override));
   return [
-    `The solution is emailed ${h} hour${h === 1 ? "" : "s"} after purchase — not with the download, so you can't peek.`,
+    `The solution is emailed ${h} after purchase — not with the download, so you can't peek.`,
     "It goes to the email address you pay with. Check spam if it hasn't arrived on time.",
   ].join("\n");
 }
@@ -238,6 +241,45 @@ export const CASE_LIMITS = {
 } as const;
 
 export type LimitedField = keyof typeof CASE_LIMITS;
+
+/**
+ * Hour inputs in the admin form. Fractions allowed. Solve time is stored as
+ * whole minutes (CASE_LIMITS.solve_minutes, i.e. 0.25–24 h); the solution
+ * delay as hours (0008, NULL = rank default).
+ */
+export const HOUR_LIMITS = {
+  solve_hours: { min: 0.25, max: 24, label: "Solve time" },
+  solution_delay_hours: { min: 0, max: 168, label: "Solution delay" },
+} as const;
+
+export type HourField = keyof typeof HOUR_LIMITS;
+
+export function hoursMessage(field: HourField): string {
+  const { min, max, label } = HOUR_LIMITS[field];
+  return `${label} must be between ${min} and ${max} hours.`;
+}
+
+export function withinHours(field: HourField, n: number): boolean {
+  const { min, max } = HOUR_LIMITS[field];
+  return Number.isFinite(n) && n >= min && n <= max;
+}
+
+/** The case's own delay, else its rank's. Approval, emails and every page
+ *  showing "+2h" go through this. */
+export function solutionDelayHours(rank: Rank, override?: number | null): number {
+  return override ?? RANKS[rank].solutionDelayHours;
+}
+
+/** 2 → "2 hours", 1 → "1 hour", 0.5 → "30m", 1.5 → "1h 30m". */
+export function formatHours(h: number): string {
+  if (Number.isInteger(h)) return `${h} hour${h === 1 ? "" : "s"}`;
+  return formatSolveTime(Math.round(h * 60));
+}
+
+/** Compact form for badges: 2 → "2h", 0.5 → "30m". */
+export function formatHoursShort(h: number): string {
+  return formatSolveTime(Math.round(h * 60));
+}
 
 /** "Solve time must be between 15 and 1440 minutes." */
 export function limitMessage(field: LimitedField): string {

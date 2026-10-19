@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   RANKS,
+  hoursMessage,
   isRank,
   limitMessage,
   parseContentsText,
+  withinHours,
   withinLimit,
   type ContentItem,
 } from "@/lib/cases";
@@ -33,7 +35,8 @@ const ECHOED_FIELDS = [
   "description",
   "tags",
   "price",
-  "solve_minutes",
+  "solve_hours",
+  "solution_delay_hours",
   "page_count",
   "contents_text",
   "purchase_info",
@@ -69,6 +72,7 @@ interface CaseWrite {
   content_note: string | null;
   tags: string[];
   solve_minutes: number;
+  solution_delay_hours: number | null;
   page_count: number;
 }
 
@@ -117,9 +121,18 @@ function parseCaseForm(fd: FormData):
   const difficulty_rank = str(fd, "difficulty_rank");
   if (!isRank(difficulty_rank)) fields.difficulty_rank = "Pick a rank.";
 
-  const solve_minutes = int(fd, "solve_minutes");
-  if (!withinLimit("solve_minutes", solve_minutes)) {
-    fields.solve_minutes = limitMessage("solve_minutes");
+  // Typed in hours, stored as whole minutes (the DB range is 15–1440).
+  const solveHours = int(fd, "solve_hours");
+  const solve_minutes = Math.round(solveHours * 60);
+  if (!withinHours("solve_hours", solveHours) || !withinLimit("solve_minutes", solve_minutes)) {
+    fields.solve_hours = hoursMessage("solve_hours");
+  }
+
+  // Blank = the rank's default delay.
+  const delayRaw = str(fd, "solution_delay_hours");
+  const delay = delayRaw === "" ? null : Number(delayRaw);
+  if (delay !== null && !withinHours("solution_delay_hours", delay)) {
+    fields.solution_delay_hours = hoursMessage("solution_delay_hours");
   }
 
   const page_count = int(fd, "page_count");
@@ -155,6 +168,7 @@ function parseCaseForm(fd: FormData):
       content_note: str(fd, "content_note") || null,
       tags,
       solve_minutes,
+      solution_delay_hours: delay === null ? null : Math.round(delay * 100) / 100,
       page_count,
     },
   };
@@ -285,10 +299,22 @@ function dbErrorState(message: string): CaseFormState {
   if (message.includes("cases_slug_check")) {
     return { error: "Fix 1 field before saving.", fields: { slug: friendlyDbError(message) } };
   }
-  for (const field of ["price", "solve_minutes", "page_count"] as const) {
+  for (const field of ["price", "page_count"] as const) {
     if (message.includes(`cases_${field}_range`)) {
       return { error: "Fix 1 field before saving.", fields: { [field]: limitMessage(field) } };
     }
+  }
+  if (message.includes("cases_solve_minutes_range")) {
+    return { error: "Fix 1 field before saving.", fields: { solve_hours: hoursMessage("solve_hours") } };
+  }
+  if (message.includes("cases_solution_delay_hours_range")) {
+    return {
+      error: "Fix 1 field before saving.",
+      fields: { solution_delay_hours: hoursMessage("solution_delay_hours") },
+    };
+  }
+  if (message.includes("solution_delay_hours")) {
+    return { error: "Run supabase/migrations/0008_solution_delay.sql first." };
   }
   return { error: friendlyDbError(message) };
 }

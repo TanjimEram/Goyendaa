@@ -151,7 +151,7 @@ export function CaseTable({ initial }: { initial: CaseListItem[] }) {
                   <p>
                     <span className="font-display text-lg text-cream">{RANKS[rank].label}</span>
                     <span className="ml-3 font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
-                      {rows.length} case{rows.length === 1 ? "" : "s"} &middot; solution +
+                      {rows.length} case{rows.length === 1 ? "" : "s"} &middot; default solution +
                       {RANKS[rank].solutionDelayHours}h
                     </span>
                   </p>

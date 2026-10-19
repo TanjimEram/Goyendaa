@@ -6,13 +6,17 @@ import { saveCase, type CaseFormState } from "@/app/admin/(dashboard)/cases/acti
 import { FileUpload } from "@/components/admin/FileUpload";
 import {
   CASE_LIMITS,
+  HOUR_LIMITS,
   RANKS,
   RANK_ORDER,
   RANK_CONTENTS,
   contentsToText,
+  formatHours,
+  hoursMessage,
   limitMessage,
   defaultDeliveryInfo,
   defaultPurchaseInfo,
+  type HourField,
   type LimitedField,
   type Rank,
 } from "@/lib/cases";
@@ -30,13 +34,15 @@ const FIELD_LABELS: Record<string, string> = {
   slug: "Slug",
   difficulty_rank: "Difficulty rank",
   price: "Price",
-  solve_minutes: "Solve time",
+  solve_hours: "Solve time",
+  solution_delay_hours: "Solution delay",
   page_count: "Printed pages",
 };
 
 /** Our wording for a native constraint failure, instead of the browser's. */
 function messageFor(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string {
   if (el.name in CASE_LIMITS) return limitMessage(el.name as LimitedField);
+  if (el.name in HOUR_LIMITS) return hoursMessage(el.name as HourField);
   if (el.validity.valueMissing) return `${FIELD_LABELS[el.name] ?? "This field"} is required.`;
   return el.validationMessage;
 }
@@ -45,6 +51,12 @@ function messageFor(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectEleme
 function limits(field: LimitedField) {
   const { min, max } = CASE_LIMITS[field];
   return { min, max, step: 1, inputMode: "numeric" as const };
+}
+
+/** Hour inputs take fractions: 1.5 = 1h 30m. */
+function hourLimits(field: HourField) {
+  const { min, max } = HOUR_LIMITS[field];
+  return { min, max, step: "any", inputMode: "decimal" as const };
 }
 
 function Field({
@@ -130,6 +142,14 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
   }
 
   const [rank, setRank] = useState<Rank>(initial?.difficulty_rank ?? defaultRank ?? "rookie");
+  // Controlled so the delivery-copy placeholder can quote the delay live.
+  const [delay, setDelay] = useState(
+    v("solution_delay_hours", initial?.solution_delay_hours ?? ""),
+  );
+  const delayHours =
+    delay.trim() === "" || !Number.isFinite(Number(delay))
+      ? RANKS[rank].solutionDelayHours
+      : Number(delay);
 
   // Slug follows the title until the admin edits it by hand.
   const [title, setTitle] = useState(initial?.title ?? "");
@@ -309,20 +329,40 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
         </Field>
 
         <Field
-          label="Solve time (minutes)"
-          name="solve_minutes"
-          error={f.solve_minutes}
-          hint={`${CASE_LIMITS.solve_minutes.min}–${CASE_LIMITS.solve_minutes.max}, any whole number.`}
+          label="Solve time (hours)"
+          name="solve_hours"
+          error={f.solve_hours}
+          hint={`${HOUR_LIMITS.solve_hours.min}–${HOUR_LIMITS.solve_hours.max}. 1.5 = 1h 30m.`}
         >
           <input
-            id="solve_minutes"
-            name="solve_minutes"
+            id="solve_hours"
+            name="solve_hours"
             type="number"
-            {...limits("solve_minutes")}
+            {...hourLimits("solve_hours")}
             required
-            aria-invalid={Boolean(f.solve_minutes)}
-            aria-describedby={f.solve_minutes ? "solve_minutes-error" : undefined}
-            defaultValue={v("solve_minutes", initial?.solve_minutes ?? 60)}
+            aria-invalid={Boolean(f.solve_hours)}
+            aria-describedby={f.solve_hours ? "solve_hours-error" : undefined}
+            defaultValue={v("solve_hours", (initial?.solve_minutes ?? 60) / 60)}
+            className={`${INPUT} font-mono`}
+          />
+        </Field>
+
+        <Field
+          label="Solution delay (hours)"
+          name="solution_delay_hours"
+          error={f.solution_delay_hours}
+          hint={`Hours after you approve the order (the case file goes out) until the solution is emailed. Blank = ${RANKS[rank].label} default, ${RANKS[rank].solutionDelayHours}h. Checked every 10 minutes.`}
+        >
+          <input
+            id="solution_delay_hours"
+            name="solution_delay_hours"
+            type="number"
+            {...hourLimits("solution_delay_hours")}
+            aria-invalid={Boolean(f.solution_delay_hours)}
+            aria-describedby={f.solution_delay_hours ? "solution_delay_hours-error" : undefined}
+            value={delay}
+            onChange={(e) => setDelay(e.target.value)}
+            placeholder={String(RANKS[rank].solutionDelayHours)}
             className={`${INPUT} font-mono`}
           />
         </Field>
@@ -388,14 +428,14 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
         <Field
           label="How and when the solution arrives"
           name="delivery_info"
-          hint={`Blank = the default for ${RANKS[rank].label} (+${RANKS[rank].solutionDelayHours}h).`}
+          hint={`Blank = the default wording, quoting the solution delay (${formatHours(delayHours)}).`}
         >
           <textarea
             id="delivery_info"
             name="delivery_info"
             rows={4}
             defaultValue={v("delivery_info", initial?.delivery_info ?? "")}
-            placeholder={defaultDeliveryInfo(rank)}
+            placeholder={defaultDeliveryInfo(rank, delayHours)}
             className={INPUT}
           />
         </Field>
@@ -483,7 +523,7 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
 
         <FileUpload
           label="Solution PDF"
-          hint="Emailed after the rank's delay. Never linked publicly."
+          hint="Emailed after the solution delay. Never linked publicly."
           bucket={FILES_BUCKET}
           folder="solutions"
           accept="application/pdf"

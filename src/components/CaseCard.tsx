@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   RANKS,
+  formatHoursShort,
   formatSolveTime,
+  solutionDelayHours,
   formatTaka,
   type CaseFile,
 } from "@/lib/cases";
@@ -124,7 +126,7 @@ export function CaseCard({ caseFile }: { caseFile: CaseFile }) {
             <div className="mt-auto border-t border-noir-line pt-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
                 {formatSolveTime(solveMinutes)} &middot; {pages} pages &middot;{" "}
-                {RANKS[rank].solutionDelayHours}h to solution
+                {formatHoursShort(solutionDelayHours(rank, caseFile.solutionDelayHours))} to solution
               </p>
 
               <div className="mt-4 flex items-center justify-between gap-4">
