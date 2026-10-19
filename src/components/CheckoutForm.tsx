@@ -46,6 +46,17 @@ export function CheckoutForm({
     <form action={action} className="flex flex-col gap-7">
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="slug" value={slug} />
+      {/* Honeypot: off-screen and skipped by keyboard and screen readers, so
+          only a bot fills it. The server drops any submission that does. */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        defaultValue=""
+        style={{ position: "absolute", left: "-10000px", width: 1, height: 1, opacity: 0 }}
+      />
 
       <div>
         <label htmlFor="name" className={LABEL}>
