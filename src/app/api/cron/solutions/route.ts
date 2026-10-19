@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { serverEnv } from "@/lib/env";
+import { purgeStaleReservations } from "@/lib/orders-data";
 import { sendDueSolutions } from "@/lib/solutions";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,12 @@ async function run(request: NextRequest) {
   try {
     const result = await sendDueSolutions();
     if (result.due) console.log("[cron] solutions", JSON.stringify(result));
-    return NextResponse.json({ ok: true, ...result });
+    // Housekeeping; never let it fail the solution run.
+    const purged = await purgeStaleReservations().catch((error) => {
+      console.error("[cron] purge failed", error);
+      return 0;
+    });
+    return NextResponse.json({ ok: true, ...result, purged });
   } catch (error) {
     // Supabase errors are plain objects; String() on them says nothing.
     const message =
