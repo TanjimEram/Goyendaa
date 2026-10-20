@@ -227,6 +227,17 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Metadata:** root layout sets `metadataBase` from `SITE.url` (`NEXT_PUBLIC_SITE_URL`, fallback to the workers.dev URL) and a `%s — Goyenda` title template — page titles must NOT append the suffix themselves. OG/Twitter defaults come from the layout; per-page `description` overrides are fine.
 - **Env vars are `NEXT_PUBLIC_*` and therefore build-time.** On Cloudflare they must be set as *build* variables (Workers Builds → Build → Variables) or the bundle ships with them undefined. See `.env.example`.
 
+### Security (review of 2026-10-20)
+
+- **CSP is per request, with a nonce**, set in `src/proxy.ts`, which now runs on every page (matcher excludes `api/`, `_next/*` and files with an extension). The root layout calls `connection()` so no page is prerendered — a prerendered page has no nonce and the CSP would block its scripts. Don't add `export const dynamic = "force-static"` anywhere. Other headers (nosniff, DENY, referrer, HSTS) live in `next.config.ts`; `public/_headers` covers static assets.
+- **Adding a third-party script, frame, image host or API?** Add its origin to `contentSecurityPolicy()` in `proxy.ts`, or the browser silently blocks it.
+- **Supabase auth cookies** use `AUTH_COOKIE_OPTIONS` (`src/lib/supabase/env.ts`): Secure in production, 7-day sliding. They can't be httpOnly while `FileUpload` uploads from the browser with the admin session.
+- **The anon key reads only `PUBLIC_COLUMNS`** (column grants, migration 0009). A new public column must be added to both `PUBLIC_COLUMNS` and the `grant select (…)` in a migration, or public pages fail.
+- **Turnstile** on checkout + login (`src/components/Turnstile.tsx`, `src/lib/bot-guard.ts`). Off unless `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (build var) **and** `TURNSTILE_SECRET_KEY` (Worker secret) are both set. Scripted checkout tests need Cloudflare's always-pass test keys locally.
+- **Login throttle:** 5 failures/IP or 10/account per 15 min (`login_attempts`, migration 0010, hashed emails, purged by the cron).
+- **Logging:** use `logError` / `redact` from `src/lib/log.ts`, never `console.error(…, error)` with a raw Supabase error — its `details` holds row values (emails, TrxIDs).
+- **Downloads** are named `<slug>-<ORDER-CODE>.pdf`. A real in-PDF watermark is out of reach on the free Worker CPU budget.
+
 ### Solution delivery (the delayed-answer job)
 
 - **Clock starts at approval.** `approveOrder` stamps `solution_send_at = approved_at + caseDelayHours(case)`: the case's own `solution_delay_hours` (admin form, hours, fractions OK, migration 0008), else `RANKS[rank].solutionDelayHours`. The buyer page and solution email quote the delay recorded on the order (`heldHours`), so editing a case later never rewrites an earlier promise. Nothing about downloading changes it. Solve time is also typed in hours in the admin and stored as `solve_minutes`.
