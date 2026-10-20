@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getPublishedCase } from "@/lib/cases-data";
 import { adminNewOrderMail, buyerOrderReceivedMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
+import { clientIp, passesTurnstile } from "@/lib/bot-guard";
 import { logError } from "@/lib/log";
 import {
   getOrderByIdService,
@@ -73,6 +74,10 @@ export async function submitManualPayment(
   if (codeTyped !== order.order_code) fields.code = `Type the order code shown above: ${order.order_code}.`;
 
   if (Object.keys(fields).length) return { fields, values, error: "Fix the fields marked below." };
+
+  if (!(await passesTurnstile(formData, await clientIp()))) {
+    return { error: "Couldn't confirm you're human. Wait a moment and press the button again.", values };
+  }
 
   let saved;
   let caseFile;

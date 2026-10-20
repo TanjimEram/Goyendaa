@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { submitManualPayment, type CheckoutState } from "@/app/checkout/[slug]/actions";
 import { CopyButton } from "@/components/CopyButton";
+import { Turnstile } from "@/components/Turnstile";
 
 const INPUT =
   "mt-2 w-full border border-noir-line bg-noir-raised px-4 py-3 font-sans text-base text-cream outline-none transition-colors duration-300 ease-noir placeholder:text-ash/50 focus:border-brass";
@@ -147,6 +148,7 @@ export function CheckoutForm({
         )}
       </div>
 
+      <Turnstile resetKey={state} />
       {state.error && (
         <p role="alert" className="border-l-2 border-blood pl-3 font-mono text-[11px] text-cream">
           {state.error}

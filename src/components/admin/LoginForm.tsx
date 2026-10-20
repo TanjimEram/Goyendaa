@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login, type LoginState } from "@/app/admin/login/actions";
+import { Turnstile } from "@/components/Turnstile";
 import {
   AUTH_BUTTON,
   AUTH_INPUT,
@@ -50,6 +51,7 @@ export function LoginForm({ notice }: { notice?: string }) {
           />
         </div>
 
+        <Turnstile resetKey={state} />
         {state.error && <AuthError>{state.error}</AuthError>}
 
         <button type="submit" disabled={pending} className={AUTH_BUTTON}>
