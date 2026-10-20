@@ -23,3 +23,19 @@ export function getSupabaseEnv() {
   }
   return { url, key };
 }
+
+/**
+ * Auth-cookie settings for every Supabase client (browser, server, proxy).
+ * Library default is 400 days, no Secure flag. A week, sliding: the proxy
+ * re-sets it on every refresh, so only an idle admin has to sign in again.
+ *
+ * httpOnly has to stay off — the admin's browser client reads the session
+ * to upload straight to Storage. The CSP in proxy.ts is what keeps an
+ * injected script from ever running to read it.
+ */
+export const AUTH_COOKIE_OPTIONS = {
+  path: "/",
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 60 * 60 * 24 * 7,
+} as const;

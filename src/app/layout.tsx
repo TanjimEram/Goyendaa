@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, IBM_Plex_Mono, Inter } from "next/font/google";
+import { connection } from "next/server";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -47,7 +48,12 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Every page renders per request so it carries the CSP nonce proxy.ts
+  // sets. A prerendered page has no nonce on its scripts and would be
+  // blocked by the policy. Costs nothing that matters: the few static
+  // pages (terms, FAQ …) are tiny.
+  await connection();
   return (
     <html
       lang="en"

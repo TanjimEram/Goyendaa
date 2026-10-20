@@ -1,0 +1,5 @@
+# Cloudflare static-asset headers (files served without the Worker:
+# /_next/static, public/). Pages get theirs from next.config.ts + proxy.ts.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

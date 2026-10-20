@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseEnv } from "@/lib/supabase/env";
+import { AUTH_COOKIE_OPTIONS, getSupabaseEnv } from "@/lib/supabase/env";
 
 const LOGIN_PATH = "/admin/login";
 
@@ -18,8 +18,40 @@ function isPublicAdminPath(pathname: string) {
 /** Cookie that ties a browser to its open checkout reservations. */
 export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
 
+const TURNSTILE = "https://challenges.cloudflare.com";
+
 /**
- * Two jobs:
+ * Nonce-based CSP. Next reads the nonce from the request header during
+ * render and stamps it on its own scripts; 'strict-dynamic' lets those load
+ * the rest. Anything injected without the nonce doesn't run — which also
+ * protects the admin's (necessarily non-httpOnly) Supabase session cookie.
+ * Styles stay 'unsafe-inline': next/image and a few components use inline
+ * style attributes, and style injection can't read cookies.
+ */
+function contentSecurityPolicy(nonce: string, https: boolean): string {
+  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
+    : "";
+  const dev = process.env.NODE_ENV === "development";
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${supabase}`,
+    "font-src 'self' data:",
+    `connect-src 'self' ${supabase} ${TURNSTILE}`,
+    `media-src 'self' ${supabase}`,
+    `frame-src ${TURNSTILE}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(https ? ["upgrade-insecure-requests"] : []),
+  ].join("; ");
+}
+
+/**
+ * Every page: a fresh CSP nonce (see above). Then two route-specific jobs:
  *
  * /checkout/* — plants a random checkout-session cookie if the browser has
  * none, so the checkout page can reserve ONE order code per session+case
@@ -33,26 +65,45 @@ export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
  * dashboard layout repeats the check server-side, and RLS is the real wall.
  */
 export async function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/checkout")) {
-    if (request.cookies.has(CHECKOUT_SESSION_COOKIE)) return NextResponse.next();
-    const id = crypto.randomUUID();
-    request.cookies.set(CHECKOUT_SESSION_COOKIE, id);
-    const res = NextResponse.next({ request });
-    res.cookies.set(CHECKOUT_SESSION_COOKIE, id, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: request.nextUrl.protocol === "https:",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-    return res;
-  }
+  const nonce = btoa(crypto.randomUUID());
+  const csp = contentSecurityPolicy(nonce, request.nextUrl.protocol === "https:");
+  // On the request so the render picks the nonce up, on the response so the
+  // browser enforces it. Every branch below must forward `request`.
+  request.headers.set("content-security-policy", csp);
+  const response = await route(request);
+  response.headers.set("Content-Security-Policy", csp);
+  return response;
+}
 
+async function route(request: NextRequest): Promise<NextResponse> {
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/checkout")) return checkout(request);
+  if (pathname.startsWith("/admin")) return admin(request);
+  return NextResponse.next({ request });
+}
+
+function checkout(request: NextRequest): NextResponse {
+  if (request.cookies.has(CHECKOUT_SESSION_COOKIE)) return NextResponse.next({ request });
+  const id = crypto.randomUUID();
+  request.cookies.set(CHECKOUT_SESSION_COOKIE, id);
+  const res = NextResponse.next({ request });
+  res.cookies.set(CHECKOUT_SESSION_COOKIE, id, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.nextUrl.protocol === "https:",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return res;
+}
+
+async function admin(request: NextRequest): Promise<NextResponse> {
   const { url, key } = getSupabaseEnv();
 
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: AUTH_COOKIE_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -96,5 +147,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/checkout/:path*"],
+  // Every page; not API routes, build assets, or files with an extension
+  // (icons, robots.txt, images in public/).
+  matcher: ["/((?!api/|_next/static|_next/image|.*\\..*).*)"],
 };

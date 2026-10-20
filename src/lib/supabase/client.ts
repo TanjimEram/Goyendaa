@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import { getSupabaseEnv } from "./env";
+import { AUTH_COOKIE_OPTIONS, getSupabaseEnv } from "./env";
 
 /**
  * Browser client. Shares the auth cookies written by the server, so after
@@ -11,5 +11,5 @@ import { getSupabaseEnv } from "./env";
  */
 export function createClient() {
   const { url, key } = getSupabaseEnv();
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, { cookieOptions: AUTH_COOKIE_OPTIONS });
 }
