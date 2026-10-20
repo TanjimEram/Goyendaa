@@ -32,7 +32,10 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/orders/[token]/
   if (!path) return new NextResponse("The file for this case isn't available yet.", { status: 503 });
 
   const supabase = await createServiceClient();
-  const filename = `${order.case.slug}-case-file.pdf`;
+  // ponytail: order code in the filename only. A real in-PDF watermark
+  // means rewriting up to 25 MB per download — over the free Worker's
+  // ~10 ms CPU budget. Stamp at approval time if a paid plan ever exists.
+  const filename = `${order.case.slug}-${order.order_code}.pdf`;
   const { data, error } = await supabase.storage
     .from(FILES_BUCKET)
     .createSignedUrl(path, 60 * 10, { download: filename });
