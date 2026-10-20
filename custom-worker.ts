@@ -15,6 +15,7 @@
  */
 // @ts-expect-error — generated at build time by opennextjs-cloudflare
 import { default as handler } from "./.open-next/worker.js";
+import { describeError, redact } from "./src/lib/log";
 
 const CRON_PATH = "/api/cron/solutions";
 const CRON_HEADER = "x-goyenda-cron";
@@ -40,9 +41,9 @@ const worker = {
       try {
         const res = await handler.fetch(request, env, ctx);
         const body = await res.text();
-        console.log(`[cron] ${event.cron} → ${res.status} ${body.slice(0, 500)}`);
+        console.log(`[cron] ${event.cron} → ${res.status} ${redact(body.slice(0, 500))}`);
       } catch (error) {
-        console.error("[cron] run threw", error);
+        console.error("[cron] run threw", describeError(error));
       }
     })();
 

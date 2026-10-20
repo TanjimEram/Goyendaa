@@ -2,6 +2,7 @@ import "server-only";
 
 import { serverEnv } from "@/lib/env";
 import { formatHours } from "@/lib/cases";
+import { redact } from "@/lib/log";
 import { SITE } from "@/lib/site";
 
 /**
@@ -52,7 +53,7 @@ export async function sendMail(mail: Mail): Promise<SendResult> {
     return sendViaResend(mail, resendKey, configuredFrom ?? "Goyenda <onboarding@resend.dev>", replyTo);
   }
 
-  console.warn(`[email] no provider key set — would send "${mail.subject}" to ${mail.to}`);
+  console.warn(`[email] no provider key set — would send "${redact(mail.subject)}" to [email]`);
   return { ok: false, error: "email not configured" };
 }
 
@@ -78,7 +79,7 @@ async function sendViaBrevo(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error(`[email] Brevo ${res.status}: ${body}`);
+    console.error(`[email] Brevo ${res.status}: ${redact(body.slice(0, 300))}`);
     return { ok: false, error: `Brevo ${res.status}` };
   }
   const data = (await res.json().catch(() => ({}))) as { messageId?: string };
@@ -106,7 +107,7 @@ async function sendViaResend(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    console.error(`[email] Resend ${res.status}: ${body}`);
+    console.error(`[email] Resend ${res.status}: ${redact(body.slice(0, 300))}`);
     return { ok: false, error: `Resend ${res.status}` };
   }
   const data = (await res.json().catch(() => ({}))) as { id?: string };

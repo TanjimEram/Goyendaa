@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient, createPublicClient } from "@/lib/supabase/server";
+import { logError } from "@/lib/log";
 import { isRank, type CaseFile, type ContentItem, type Rank } from "@/lib/cases";
 
 /** One row of `public.cases`, as Supabase returns it. */
@@ -75,7 +76,7 @@ export function rowToCaseFile(row: CaseRow): CaseFile {
  */
 function publicFailure<T>(what: string, error: unknown, fallback: T): T {
   if (process.env.NODE_ENV !== "production") throw error;
-  console.error(`[cases-data] ${what} failed`, error);
+  logError(`[cases-data] ${what} failed`, error);
   return fallback;
 }
 

@@ -3,6 +3,7 @@ import { getOrderByToken } from "@/lib/orders-data";
 import { SITE } from "@/lib/site";
 import { FILES_BUCKET } from "@/lib/storage";
 import { createServiceClient } from "@/lib/supabase/server";
+import { logError } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/orders/[token]/
     .createSignedUrl(path, 60 * 10, { download: `${order.case.slug}-solution.pdf` });
 
   if (error || !data?.signedUrl) {
-    console.error("[solution] signed url failed", error);
+    logError("[solution] signed url failed", error);
     return new NextResponse("Couldn't prepare the download. Try again in a minute.", { status: 500 });
   }
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { redact } from "@/lib/log";
 
 /**
  * Landing point for the recovery email link. Turns the one-time token into
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (failure) {
-    console.warn("[auth] recovery link rejected:", failure);
+    console.warn("[auth] recovery link rejected:", redact(String(failure)));
     dest.searchParams.set("error", "expired");
   }
 

@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
+import { redact } from "@/lib/log";
 
 export interface ForgotState {
   /** True once a request was made — the form swaps to the generic notice. */
@@ -35,7 +36,7 @@ export async function requestPasswordReset(
   // Never tell the form whether the address exists. Supabase already
   // answers "ok" for unknown emails; rate limits and SMTP failures are the
   // only real errors, and those go to the server log, not the page.
-  if (error) console.warn("[auth] password reset request failed:", error.message);
+  if (error) console.warn("[auth] password reset request failed:", redact(error.message));
 
   return { sent: true };
 }

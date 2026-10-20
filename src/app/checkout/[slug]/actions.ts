@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getPublishedCase } from "@/lib/cases-data";
 import { adminNewOrderMail, buyerOrderReceivedMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
+import { logError } from "@/lib/log";
 import {
   getOrderByIdService,
   normalizeOrderCode,
@@ -21,6 +22,7 @@ export interface CheckoutState {
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID = /^[0-9a-f-]{36}$/i;
 // bKash TrxIDs are 10 upper-case alphanumerics (e.g. BJK7H2X9QT). Allow a
 // little slack either side in case the format shifts.
 const TRXID = /^[A-Z0-9]{6,20}$/;
@@ -51,14 +53,16 @@ export async function submitManualPayment(
 
   const fields: Record<string, string> = {};
   if (name.length < 2) fields.name = "Your name, so we can address the email.";
-  if (!EMAIL.test(email)) fields.email = "A working email — the download link and the solution go here.";
+  if (!EMAIL.test(email) || email.length > 254) fields.email = "A working email — the download link and the solution go here.";
   if (!TRXID.test(trxid)) fields.trxid = "That doesn't look like a bKash Transaction ID. It's in your confirmation SMS, e.g. BJK7H2X9QT.";
+
+  if (!UUID.test(orderId)) return { error: "This checkout has expired. Go back to the case and start again.", values };
 
   let order;
   try {
     order = await getOrderByIdService(orderId);
   } catch (error) {
-    console.error("[checkout] order lookup failed", error);
+    logError("[checkout] order lookup failed", error);
     return { error: UNAVAILABLE, values };
   }
   if (!order || order.case.slug !== slug) return { error: "This checkout has expired. Go back to the case and start again.", values };
@@ -97,7 +101,7 @@ export async function submitManualPayment(
     // send this click to the same order page instead of an error.
     const now = await getOrderByIdService(order.id).catch(() => null);
     if (now && now.status !== "started") redirect(`/orders/${now.access_token}`);
-    console.error("[checkout] submit failed", error);
+    logError("[checkout] submit failed", error);
     return { error: UNAVAILABLE, values };
   }
 

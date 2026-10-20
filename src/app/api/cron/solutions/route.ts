@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { serverEnv } from "@/lib/env";
 import { purgeStaleReservations } from "@/lib/orders-data";
 import { sendDueSolutions } from "@/lib/solutions";
+import { describeError, logError, redact } from "@/lib/log";
 
 export const dynamic = "force-dynamic";
 
@@ -28,18 +29,17 @@ async function run(request: NextRequest) {
 
   try {
     const result = await sendDueSolutions();
-    if (result.due) console.log("[cron] solutions", JSON.stringify(result));
+    if (result.due) console.log("[cron] solutions", redact(JSON.stringify(result)));
     // Housekeeping; never let it fail the solution run.
     const purged = await purgeStaleReservations().catch((error) => {
-      console.error("[cron] purge failed", error);
+      logError("[cron] purge failed", error);
       return 0;
     });
     return NextResponse.json({ ok: true, ...result, purged });
   } catch (error) {
-    // Supabase errors are plain objects; String() on them says nothing.
-    const message =
-      error instanceof Error ? error.message : (JSON.stringify(error) ?? "unknown error");
-    console.error("[cron] solutions run failed", error);
+    // Code + message only: a Supabase error's `details` holds row values.
+    const message = describeError(error);
+    console.error("[cron] solutions run failed", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

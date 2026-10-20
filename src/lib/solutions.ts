@@ -2,6 +2,7 @@ import "server-only";
 
 import { adminSolutionFailedMail, buyerSolutionMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
+import { logError } from "@/lib/log";
 import {
   claimSolutionSend,
   getDueSolutionOrders,
@@ -115,6 +116,6 @@ async function alertAdmin(order: OrderWithCase, reason: string): Promise<void> {
       ...adminSolutionFailedMail(mailInfo(order), reason, `${SITE.url}/admin/orders`),
     });
   } catch (error) {
-    console.error("[solutions] admin alert failed", error);
+    logError("[solutions] admin alert failed", error);
   }
 }
