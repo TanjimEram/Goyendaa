@@ -193,3 +193,22 @@ export function answerOpensAt(
   const opens = Math.max(fixed, delay);
   return opens > Date.now() ? new Date(opens).toISOString() : null;
 }
+
+/** One CSV cell: quoted, inner quotes doubled, and a leading = + - @
+ *  neutralised so a spreadsheet never runs a lead's input as a formula. */
+function csvCell(v: unknown): string {
+  let s = v === null || v === undefined ? "" : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+/** The Leads table as CSV (UTF-8 with BOM so Excel reads Bangla names). */
+export function leadsToCsv(leads: LeadRow[]): string {
+  const head = ["email", "name", "case", "consent", "utm_source", "utm_medium", "utm_campaign", "downloads", "answer_views", "created_at"];
+  const rows = leads.map((l) =>
+    [l.email, l.name, l.case_slug, l.consent ? "yes" : "no", l.utm_source, l.utm_medium, l.utm_campaign, l.downloads, l.answer_views, l.created_at]
+      .map(csvCell)
+      .join(","),
+  );
+  return "﻿" + [head.join(","), ...rows].join("\r\n") + "\r\n";
+}
