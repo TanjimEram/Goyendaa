@@ -77,6 +77,18 @@ function CaseThumbnail({ caseFile }: { caseFile: CaseFile }) {
   );
 }
 
+/** "FREE CASE" stamp: black, gold rule, red mark, cream type. */
+export function FreeBadge({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 border border-brass bg-noir px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-cream ${className}`}
+    >
+      <span aria-hidden className="h-1.5 w-1.5 bg-blood" />
+      Free case
+    </span>
+  );
+}
+
 export function CaseCard({ caseFile }: { caseFile: CaseFile }) {
   const { slug, code, title, premise, rank, solveMinutes, pages, priceBdt, tags } =
     caseFile;
@@ -87,7 +99,7 @@ export function CaseCard({ caseFile }: { caseFile: CaseFile }) {
       {/* The whole card is one link; inner "button" is a span, not a nested <a>. */}
       <Link
         href={`/cases/${slug}`}
-        aria-label={`${title} — ${RANKS[rank].label}, ${formatTaka(priceBdt)}`}
+        aria-label={`${title} — ${caseFile.isFree ? "free case" : `${RANKS[rank].label}, ${formatTaka(priceBdt)}`}`}
         className="block h-full outline-none focus-visible:[&>article]:border-brass"
       >
         {/* Folder tab */}
@@ -99,7 +111,8 @@ export function CaseCard({ caseFile }: { caseFile: CaseFile }) {
           {/* Document preview */}
           <div className="relative overflow-hidden border-b border-noir-line bg-gradient-to-br from-noir to-noir-raised">
             <CaseThumbnail caseFile={caseFile} />
-            <div className="absolute bottom-3 left-4">
+            <div className="absolute bottom-3 left-4 flex flex-wrap items-center gap-2">
+              {caseFile.isFree && <FreeBadge />}
               <DifficultyBadge rank={rank} />
             </div>
           </div>
@@ -126,15 +139,17 @@ export function CaseCard({ caseFile }: { caseFile: CaseFile }) {
             <div className="mt-auto border-t border-noir-line pt-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash">
                 {formatSolveTime(solveMinutes)} &middot; {pages} pages &middot;{" "}
-                {formatHoursShort(solutionDelayHours(rank, caseFile.solutionDelayHours))} to solution
+                {caseFile.isFree
+                  ? "answer online"
+                  : `${formatHoursShort(solutionDelayHours(rank, caseFile.solutionDelayHours))} to solution`}
               </p>
 
               <div className="mt-4 flex items-center justify-between gap-4">
                 <span className="font-display text-2xl text-brass">
-                  {formatTaka(priceBdt)}
+                  {caseFile.isFree ? "Free" : formatTaka(priceBdt)}
                 </span>
                 <span className="border border-noir-line px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cream transition-colors duration-300 ease-noir group-hover:border-blood group-hover:bg-blood">
-                  Take the case
+                  {caseFile.isFree ? "Play free" : "Take the case"}
                 </span>
               </div>
             </div>

@@ -132,6 +132,8 @@ export interface CaseFile {
   /** Hours from approval to the solution email. Absent = the rank's default;
    *  read it through `solutionDelayHours()`. */
   solutionDelayHours?: number;
+  /** Free case: no checkout; email capture, instant download, answer page. */
+  isFree?: boolean;
   /** Pages in the printable evidence pack. */
   pages: number;
   /** Price in BDT. Displayed with the ৳ sign. */
@@ -181,6 +183,15 @@ export function defaultDeliveryInfo(rank: Rank, override?: number | null): strin
   return [
     `The solution is emailed ${h} after purchase — not with the download, so you can't peek.`,
     "It goes to the email address you pay with. Check spam if it hasn't arrived on time.",
+  ].join("\n");
+}
+
+/** Buying copy for a free case, when the admin hasn't written its own. */
+export function defaultFreeInfo(): string {
+  return [
+    "Free. Leave your email and the case-file PDF downloads straight away.",
+    "Print at home, A4. Play it with as many people as you like.",
+    "The answer is on its own page — open it only once you've named the killer.",
   ].join("\n");
 }
 

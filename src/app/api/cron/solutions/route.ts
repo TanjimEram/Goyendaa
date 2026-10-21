@@ -3,7 +3,7 @@ import { serverEnv } from "@/lib/env";
 import { purgeStaleReservations } from "@/lib/orders-data";
 import { sendDueSolutions } from "@/lib/solutions";
 import { describeError, logError, redact } from "@/lib/log";
-import { purgeLoginAttempts } from "@/lib/bot-guard";
+import { purgeLoginAttempts, purgeRateHits } from "@/lib/bot-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,7 @@ async function run(request: NextRequest) {
       return 0;
     });
     await purgeLoginAttempts().catch((error) => logError("[cron] login purge failed", error));
+    await purgeRateHits().catch((error) => logError("[cron] rate purge failed", error));
     return NextResponse.json({ ok: true, ...result, purged });
   } catch (error) {
     // Code + message only: a Supabase error's `details` holds row values.

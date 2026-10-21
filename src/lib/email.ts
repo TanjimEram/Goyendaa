@@ -267,3 +267,43 @@ ${row("Solution", `<strong>${esc(opts.solutionAtText)}</strong> Bangladesh time`
     ),
   };
 }
+
+/** Free case: the download link, the answer link (with its unlock time
+ *  if locked) and the unsubscribe link every marketing-adjacent mail needs. */
+export function freeCaseMail(opts: {
+  name: string | null;
+  caseTitle: string;
+  downloadUrl: string;
+  answerUrl: string;
+  /** "Sat 25 Oct, 9:00 PM" when the answer is still locked, else null. */
+  answerUnlocksText: string | null;
+  unsubscribeUrl: string;
+}): Omit<Mail, "to"> {
+  const hi = opts.name ? `Hi ${opts.name},` : "Hi detective,";
+  const answerLine = opts.answerUnlocksText
+    ? `The answer unlocks on ${opts.answerUnlocksText} (Dhaka time). Same link: ${opts.answerUrl}`
+    : `Solved it? The answer is here: ${opts.answerUrl}`;
+  return {
+    subject: `Your free case — ${opts.caseTitle}`,
+    text: `${hi}
+
+Here is ${opts.caseTitle}. Print it, solve it, then check the answer.
+
+Download the case: ${opts.downloadUrl}
+${answerLine}
+
+Don't want emails from Goyenda? Unsubscribe: ${opts.unsubscribeUrl}`,
+    html: shell(
+      "Your free case.",
+      `<p>${esc(hi)}</p>
+<p>Here is <strong style="color:#efe6d5">${esc(opts.caseTitle)}</strong>. Print it, work it, and only then check the answer.</p>
+${button(opts.downloadUrl, "Download the case")}
+<p style="font-size:14px;">${
+        opts.answerUnlocksText
+          ? `The answer unlocks on <strong>${esc(opts.answerUnlocksText)}</strong> (Dhaka time). <a href="${esc(opts.answerUrl)}" style="color:#c9a96a;">This link</a> opens it then.`
+          : `Solved it? <a href="${esc(opts.answerUrl)}" style="color:#c9a96a;">Show me the answer</a>.`
+      }</p>
+<p style="font-size:12px;color:#8c857a;margin-top:28px;">Don't want emails from Goyenda? <a href="${esc(opts.unsubscribeUrl)}" style="color:#8c857a;">Unsubscribe</a>.</p>`,
+    ),
+  };
+}

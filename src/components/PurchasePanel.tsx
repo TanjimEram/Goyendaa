@@ -3,6 +3,7 @@ import { DifficultyBadge } from "@/components/CaseCard";
 import {
   RANKS,
   defaultDeliveryInfo,
+  defaultFreeInfo,
   defaultPurchaseInfo,
   formatHoursShort,
   formatSolveTime,
@@ -16,6 +17,10 @@ import {
 export function buyingLines(caseFile: CaseFile): string[] {
   const purchase = toLines(caseFile.purchaseInfo);
   const delivery = toLines(caseFile.deliveryInfo);
+  if (caseFile.isFree) {
+    const own = [...purchase, ...delivery];
+    return own.length ? own : toLines(defaultFreeInfo());
+  }
   return [
     ...(purchase.length ? purchase : toLines(defaultPurchaseInfo())),
     ...(delivery.length ? delivery : toLines(defaultDeliveryInfo(caseFile.rank, caseFile.solutionDelayHours))),

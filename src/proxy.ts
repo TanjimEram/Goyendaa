@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE_OPTIONS, getSupabaseEnv } from "@/lib/supabase/env";
+import { UTM_COOKIE, UTM_MAX_AGE, utmFromSearch } from "@/lib/utm";
 
 const LOGIN_PATH = "/admin/login";
 
@@ -74,6 +75,18 @@ export async function proxy(request: NextRequest) {
   request.headers.set("content-security-policy", csp);
   const response = await route(request);
   response.headers.set("Content-Security-Policy", csp);
+  // Landed with UTM tags (an ad, a post, a group link)? Remember them, last
+  // touch wins, for the lead or purchase that may follow days later.
+  const utm = utmFromSearch(request.nextUrl.searchParams);
+  if (utm) {
+    response.cookies.set(UTM_COOKIE, JSON.stringify(utm), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: UTM_MAX_AGE,
+    });
+  }
   return response;
 }
 

@@ -27,6 +27,7 @@ export default function PrivacyPage() {
       <Section n={1} title="What we collect">
         <ul>
           <li><strong>Email address</strong> &mdash; given at checkout. Used to send the download link and the solution.</li>
+          <li><strong>Free cases</strong> &mdash; your email, your name if you give it, which free case you took, whether you ticked &ldquo;send me new cases and weekly free puzzles&rdquo;, and which link brought you to the site (for example a Facebook post). We email you about new cases only if you ticked that box, and every email has an unsubscribe link.</li>
           <li><strong>Order details</strong> &mdash; which case, the price, the time of payment, the payment method you chose, and the aggregator&rsquo;s transaction reference. Not your bKash/Nagad number or card details; the aggregator keeps those and we never see them.</li>
           <li><strong>Basic server logs</strong> &mdash; IP address, browser type and pages requested, kept briefly by our hosting provider for security and debugging.</li>
         </ul>

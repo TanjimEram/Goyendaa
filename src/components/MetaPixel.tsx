@@ -27,7 +27,8 @@ type Fbq = {
 };
 type PixelWindow = Window & { fbq?: Fbq; _fbq?: Fbq };
 
-const PRIVATE = /^\/(admin|orders)(\/|$)/;
+// Pages whose URL can carry a token (order page, answer ?t=, unsubscribe).
+const PRIVATE = /^\/(admin|orders|unsubscribe|case)(\/|$)|^\/cases\/[^/]+\/(answer|download)/;
 
 /** Defines the queueing stub, loads fbevents.js and inits — once. */
 function ensurePixel(): Fbq | null {

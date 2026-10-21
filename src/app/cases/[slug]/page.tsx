@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CaseCard, DifficultyBadge } from "@/components/CaseCard";
+import { CaseCard, DifficultyBadge, FreeBadge } from "@/components/CaseCard";
+import { FreeCaseBar, FreeCasePanel } from "@/components/FreeCase";
 import { PixelEvent } from "@/components/MetaPixel";
 import {
   PurchaseBar,
@@ -22,6 +24,7 @@ import {
   getRelatedCases,
 } from "@/lib/cases";
 import { getPublishedCase, getPublishedCases } from "@/lib/cases-data";
+import { leadCookie, leadForCase } from "@/lib/leads";
 
 export const dynamic = "force-dynamic";
 
@@ -32,12 +35,15 @@ export async function generateMetadata({
   const caseFile = await getPublishedCase(slug);
   if (!caseFile) return { title: "Case not found" };
   const images = caseFile.thumbnail ? [{ url: caseFile.thumbnail, width: 1920, height: 1080, alt: caseFile.title }] : undefined;
+  // Free cases say so in the share card: that's what earns the click.
+  const shareTitle = caseFile.isFree ? `${caseFile.title} — a free case from Goyenda` : `${caseFile.title} — Goyenda`;
+  const shareText = caseFile.isFree ? `Free case. ${caseFile.premise}` : caseFile.premise;
   return {
     title: `${caseFile.title}`,
-    description: caseFile.premise,
+    description: shareText,
     // Without these, shared case links show the site-wide title and image.
-    openGraph: { title: `${caseFile.title} — Goyenda`, description: caseFile.premise, url: `/cases/${caseFile.slug}`, ...(images ? { images } : {}) },
-    twitter: { card: "summary_large_image", title: `${caseFile.title} — Goyenda`, description: caseFile.premise, ...(images ? { images: images.map((i) => i.url) } : {}) },
+    openGraph: { type: "website", title: shareTitle, description: shareText, url: `/cases/${caseFile.slug}`, ...(images ? { images } : {}) },
+    twitter: { card: "summary_large_image", title: shareTitle, description: shareText, ...(images ? { images: images.map((i) => i.url) } : {}) },
   };
 }
 
@@ -65,6 +71,11 @@ export default async function CaseDetailPage({
   const gallery = (caseFile.gallery ?? []).slice(0, 3);
   const previews = gallery.length ? [] : getPreviewDocs(caseFile);
   const related = getRelatedCases(caseFile, await getPublishedCases());
+  // Free case: a visitor who already left an email (cookie) gets the
+  // download / answer buttons instead of the form.
+  const claimed = caseFile.isFree
+    ? Boolean(await leadForCase((await cookies()).get(leadCookie(caseFile.slug))?.value, caseFile.slug).catch(() => null))
+    : false;
 
   return (
     <>
@@ -135,9 +146,13 @@ export default async function CaseDetailPage({
                       What does this mean?
                     </span>
                   </a>
-                  <span className="font-display text-3xl text-brass lg:hidden">
-                    {formatTaka(caseFile.priceBdt)}
-                  </span>
+                  {caseFile.isFree ? (
+                    <FreeBadge />
+                  ) : (
+                    <span className="font-display text-3xl text-brass lg:hidden">
+                      {formatTaka(caseFile.priceBdt)}
+                    </span>
+                  )}
                 </div>
 
                 {/* The hook — tease only. */}
@@ -156,10 +171,15 @@ export default async function CaseDetailPage({
                 )}
               </div>
 
-              {/* Desktop buy box. On phones the pinned PurchaseBar takes over. */}
-              <div className="hidden lg:block">
-                <PurchasePanel caseFile={caseFile} />
-              </div>
+              {/* Desktop buy box. On phones the pinned PurchaseBar takes over.
+                  A free case's form box shows at every size: it IS the flow. */}
+              {caseFile.isFree ? (
+                <FreeCasePanel slug={caseFile.slug} claimed={claimed} />
+              ) : (
+                <div className="hidden lg:block">
+                  <PurchasePanel caseFile={caseFile} />
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -338,7 +358,7 @@ export default async function CaseDetailPage({
         </section>
       </main>
       <SiteFooter />
-      <PurchaseBar caseFile={caseFile} />
+      {caseFile.isFree ? <FreeCaseBar code={caseFile.code} /> : <PurchaseBar caseFile={caseFile} />}
     </>
   );
 }

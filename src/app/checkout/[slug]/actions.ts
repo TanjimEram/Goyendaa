@@ -8,10 +8,12 @@ import { orderEnv } from "@/lib/env";
 import { clientIp, passesTurnstile } from "@/lib/bot-guard";
 import { logError } from "@/lib/log";
 import { saveAttribution } from "@/lib/meta-capi";
+import { UTM_COOKIE, utmFromCookie } from "@/lib/utm";
 import {
   getOrderByIdService,
   normalizeOrderCode,
   recentSubmissions,
+  saveOrderUtm,
   submitOrder,
   trxidInUse,
 } from "@/lib/orders-data";
@@ -87,6 +89,7 @@ export async function submitManualPayment(
   try {
     caseFile = await getPublishedCase(slug);
     if (!caseFile) return { error: "That case isn't available any more.", values };
+    if (caseFile.isFree) return { error: "This case is free — there's nothing to pay for.", values };
 
     // One bKash payment pays for one order.
     if (await trxidInUse(trxid, order.id)) {
@@ -116,6 +119,9 @@ export async function submitManualPayment(
   // For the server-side Purchase event at approval (no-op without the
   // META_CAPI_TOKEN secret). Best-effort, never blocks the order.
   const jar = await cookies();
+  // Which channel sold it (proxy.ts keeps the landing UTM in a cookie).
+  // Best-effort, after the order is safely stored.
+  await saveOrderUtm(saved.id, utmFromCookie(jar.get(UTM_COOKIE)?.value));
   await saveAttribution(saved.id, {
     meta_fbp: jar.get("_fbp")?.value ?? null,
     meta_fbc: jar.get("_fbc")?.value ?? null,

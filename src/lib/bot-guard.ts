@@ -96,3 +96,40 @@ export async function purgeLoginAttempts(): Promise<void> {
 }
 
 export const LOGIN_BLOCKED_MESSAGE = `Too many sign-in attempts. Wait ${WINDOW_MIN} minutes and try again.`;
+
+// ── Per-IP limit for public forms (table from migration 0012) ─────────
+
+/**
+ * Counts this IP's recent hits of `kind`, records this one, and says
+ * whether it is over `max` per `minutes`. The IP is stored hashed. Fails
+ * open (returns false) if the table is missing, so a forgotten migration
+ * degrades to Turnstile-only instead of locking everyone out.
+ */
+export async function ipLimited(kind: string, ip: string, max: number, minutes: number): Promise<boolean> {
+  try {
+    const supabase = await createServiceClient();
+    const ipHash = await emailKey(`ip:${ip}`);
+    const { count, error } = await supabase
+      .from("rate_hits")
+      .select("id", { count: "exact", head: true })
+      .eq("kind", kind)
+      .eq("ip_hash", ipHash)
+      .gte("at", new Date(Date.now() - minutes * 60_000).toISOString());
+    if (error) throw error;
+    await supabase.from("rate_hits").insert({ kind, ip_hash: ipHash });
+    return (count ?? 0) >= max;
+  } catch (error) {
+    logError(`[rate] ${kind} check failed`, error);
+    return false;
+  }
+}
+
+/** Cron housekeeping. */
+export async function purgeRateHits(): Promise<void> {
+  const supabase = await createServiceClient();
+  const { error } = await supabase
+    .from("rate_hits")
+    .delete()
+    .lt("at", new Date(Date.now() - 86_400_000).toISOString());
+  if (error) throw error;
+}

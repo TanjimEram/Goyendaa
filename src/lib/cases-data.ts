@@ -30,6 +30,12 @@ export interface CaseRow {
   solve_minutes: number;
   /** NULL = the rank's default. */
   solution_delay_hours: number | null;
+  /** Free case (migration 0012). Price is 0 when true. */
+  is_free: boolean;
+  /** Free case answer page: Markdown, optional private image, lock time. */
+  answer_md: string | null;
+  answer_image_path: string | null;
+  answer_unlock_at: string | null;
   page_count: number;
   created_at: string;
   updated_at: string;
@@ -38,7 +44,7 @@ export interface CaseRow {
 /** The columns the public site needs. Listed explicitly so the PDF paths
  *  never travel to the public pages by accident. */
 const PUBLIC_COLUMNS =
-  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, solution_delay_hours, page_count, purchase_info, delivery_info, contents, player_note, content_note";
+  "id, case_number, slug, title, premise, description, price, difficulty_rank, position, published, featured, thumbnail_url, gallery_urls, tags, solve_minutes, solution_delay_hours, is_free, page_count, purchase_info, delivery_info, contents, player_note, content_note";
 
 /** DB row → the shape every component already renders. */
 export function rowToCaseFile(row: CaseRow): CaseFile {
@@ -54,6 +60,7 @@ export function rowToCaseFile(row: CaseRow): CaseFile {
     // PostgREST may send numeric as a string.
     solutionDelayHours:
       row.solution_delay_hours == null ? undefined : Number(row.solution_delay_hours),
+    isFree: Boolean(row.is_free),
     pages: row.page_count,
     priceBdt: row.price,
     tags: row.tags ?? [],

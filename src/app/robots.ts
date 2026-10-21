@@ -7,7 +7,7 @@ import { SITE } from "@/lib/site";
  */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/checkout/", "/orders/", "/admin/", "/api/"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/checkout/", "/orders/", "/admin/", "/api/", "/cases/*/answer", "/cases/*/download", "/case/", "/unsubscribe"] },
     host: SITE.url,
   };
 }

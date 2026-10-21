@@ -50,6 +50,9 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
                   <span className="bg-blood px-1.5 py-0.5 text-[9px] text-cream">{pending}</span>
                 )}
               </Link>
+              <Link href="/admin/leads" className="hover:text-cream">
+                Leads
+              </Link>
               <Link href="/" className="hover:text-cream" target="_blank">
                 View site ↗
               </Link>

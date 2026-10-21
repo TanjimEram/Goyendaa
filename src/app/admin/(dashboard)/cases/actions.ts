@@ -38,6 +38,9 @@ const ECHOED_FIELDS = [
   "solve_hours",
   "solution_delay_hours",
   "page_count",
+  "is_free",
+  "answer_md",
+  "answer_unlock_at",
   "contents_text",
   "purchase_info",
   "delivery_info",
@@ -74,6 +77,10 @@ interface CaseWrite {
   solve_minutes: number;
   solution_delay_hours: number | null;
   page_count: number;
+  is_free: boolean;
+  answer_md: string | null;
+  answer_image_path: string | null;
+  answer_unlock_at: string | null;
 }
 
 async function requireAdmin() {
@@ -115,8 +122,15 @@ function parseCaseForm(fd: FormData):
   slug = slugify(slug);
   if (!SLUG_PATTERN.test(slug)) fields.slug = "Lowercase letters, numbers and hyphens only.";
 
-  const price = int(fd, "price");
+  // A free case is always ৳ 0 (the DB enforces it too).
+  const is_free = fd.get("is_free") === "on";
+  const price = is_free ? 0 : int(fd, "price");
   if (!withinLimit("price", price)) fields.price = limitMessage("price");
+
+  // "Answer locked until", typed in Dhaka time (UTC+6, no DST).
+  const unlockRaw = str(fd, "answer_unlock_at");
+  const unlockMs = unlockRaw ? Date.parse(`${unlockRaw}:00+06:00`) : NaN;
+  if (unlockRaw && Number.isNaN(unlockMs)) fields.answer_unlock_at = "Pick a date and time, or leave it empty.";
 
   const difficulty_rank = str(fd, "difficulty_rank");
   if (!isRank(difficulty_rank)) fields.difficulty_rank = "Pick a rank.";
@@ -170,6 +184,10 @@ function parseCaseForm(fd: FormData):
       solve_minutes,
       solution_delay_hours: delay === null ? null : Math.round(delay * 100) / 100,
       page_count,
+      is_free,
+      answer_md: is_free ? str(fd, "answer_md").slice(0, 20000) || null : null,
+      answer_image_path: is_free ? str(fd, "answer_image_path") || null : null,
+      answer_unlock_at: is_free && unlockRaw && !Number.isNaN(unlockMs) ? new Date(unlockMs).toISOString() : null,
     },
   };
 }
@@ -247,7 +265,7 @@ export async function deleteCase(formData: FormData) {
   const mediaPaths = [existing.thumbnail_url, ...existing.gallery_urls]
     .map((u) => (u ? publicUrlToPath(u, MEDIA_BUCKET) : null))
     .filter((p): p is string => Boolean(p));
-  const filePaths = [existing.case_pdf_path, existing.solution_pdf_path].filter(
+  const filePaths = [existing.case_pdf_path, existing.solution_pdf_path, existing.answer_image_path].filter(
     (p): p is string => Boolean(p),
   );
   if (mediaPaths.length) await supabase.storage.from(MEDIA_BUCKET).remove(mediaPaths);
@@ -312,6 +330,12 @@ function dbErrorState(message: string): CaseFormState {
       error: "Fix 1 field before saving.",
       fields: { solution_delay_hours: hoursMessage("solution_delay_hours") },
     };
+  }
+  if (message.includes("cases_free_is_zero")) {
+    return { error: "A free case must have price 0." };
+  }
+  if (/is_free|answer_md|answer_image_path|answer_unlock_at/.test(message)) {
+    return { error: "Run supabase/migrations/0012_free_cases.sql first." };
   }
   if (message.includes("solution_delay_hours")) {
     return { error: "Run supabase/migrations/0008_solution_delay.sql first." };

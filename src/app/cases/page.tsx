@@ -14,7 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CasesPage() {
-  const cases = await getPublishedCases();
+  // Free cases first, then the catalogue order.
+  const all = await getPublishedCases();
+  const cases = [...all.filter((c) => c.isFree), ...all.filter((c) => !c.isFree)];
   return (
     <>
       <SiteHeader />

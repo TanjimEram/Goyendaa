@@ -1,6 +1,6 @@
 import "server-only";
 
-import { after } from "next/server";
+import { inBackground } from "@/lib/background";
 import { serverEnv } from "@/lib/env";
 import type { OrderWithCase } from "@/lib/orders-data";
 import { SITE } from "@/lib/site";
@@ -120,23 +120,6 @@ export async function sendPurchase(order: PurchaseOrder, approvedAt: Date): Prom
   } finally {
     await clearAttribution(order.id);
   }
-}
-
-/** Keeps the Worker alive for `work` without making the caller wait:
- *  Cloudflare's ctx.waitUntil, else Next's after() (next dev). */
-export async function inBackground(work: Promise<unknown>): Promise<void> {
-  const safe = work.catch(() => undefined);
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const { ctx } = await getCloudflareContext({ async: true });
-    if (ctx?.waitUntil) {
-      ctx.waitUntil(safe);
-      return;
-    }
-  } catch {
-    // Not on Workers.
-  }
-  after(safe);
 }
 
 /** Buyers who asked us (privacy policy §4) not to send their purchases:

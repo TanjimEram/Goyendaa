@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DifficultyBadge } from "@/components/CaseCard";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { CopyButton } from "@/components/CopyButton";
@@ -44,6 +44,8 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[slu
   const { slug } = await params;
   const caseFile = await getPublishedCase(slug);
   if (!caseFile?.id) notFound();
+  // Free cases never reserve an order or show bKash: back to "Play free".
+  if (caseFile.isFree) redirect(`/cases/${caseFile.slug}#play`);
 
   // Planted by proxy.ts on the way in; reserve one order per session+case.
   const session = (await cookies()).get(CHECKOUT_SESSION_COOKIE)?.value ?? crypto.randomUUID();

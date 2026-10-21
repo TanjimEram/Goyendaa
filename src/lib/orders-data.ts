@@ -2,6 +2,7 @@ import "server-only";
 
 import { solutionDelayHours, type Rank } from "@/lib/cases";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import type { Utm } from "@/lib/utm";
 
 export type OrderStatus = "started" | "pending" | "paid" | "rejected";
 
@@ -133,6 +134,18 @@ export async function submitOrder(
     .single();
   if (error) throw error;
   return data as OrderRow;
+}
+
+/** Records the landing UTM on an order. Never throws: attribution must
+ *  not cost a sale (e.g. before migration 0012 adds the columns). */
+export async function saveOrderUtm(orderId: string, utm: Utm): Promise<void> {
+  if (!utm.utm_source && !utm.utm_medium && !utm.utm_campaign) return;
+  try {
+    const supabase = await createServiceClient();
+    await supabase.from("orders").update(utm).eq("id", orderId);
+  } catch {
+    // Attribution is optional.
+  }
 }
 
 /** True when another pending/paid order already used this bKash TrxID. */

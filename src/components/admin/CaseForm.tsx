@@ -37,6 +37,7 @@ const FIELD_LABELS: Record<string, string> = {
   solve_hours: "Solve time",
   solution_delay_hours: "Solution delay",
   page_count: "Printed pages",
+  answer_unlock_at: "Answer locked until",
 };
 
 /** Our wording for a native constraint failure, instead of the browser's. */
@@ -89,6 +90,12 @@ function Field({
       )}
     </div>
   );
+}
+
+/** A timestamptz as a datetime-local value in Dhaka time (UTC+6, no DST). */
+function toDhakaInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return new Date(Date.parse(iso) + 6 * 3_600_000).toISOString().slice(0, 16);
 }
 
 /** Create when `initial` is undefined; edit otherwise. */
@@ -164,6 +171,11 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
   const [casePdf, setCasePdf] = useState<string[]>(
     initial?.case_pdf_path ? [initial.case_pdf_path] : [],
   );
+  // Free case: no checkout; email capture, instant download, answer page.
+  const [isFree, setIsFree] = useState(initial?.is_free ?? false);
+  const [answerImage, setAnswerImage] = useState<string[]>(
+    initial?.answer_image_path ? [initial.answer_image_path] : [],
+  );
   const [solutionPdf, setSolutionPdf] = useState<string[]>(
     initial?.solution_pdf_path ? [initial.solution_pdf_path] : [],
   );
@@ -213,6 +225,7 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
       <input type="hidden" name="gallery_urls" value={JSON.stringify(gallery)} />
       <input type="hidden" name="case_pdf_path" value={casePdf[0] ?? ""} />
       <input type="hidden" name="solution_pdf_path" value={solutionPdf[0] ?? ""} />
+      <input type="hidden" name="answer_image_path" value={answerImage[0] ?? ""} />
 
       {/* ── Identity ─────────────────────────────────────────── */}
       <section className="grid gap-6 border border-noir-line bg-noir-raised/40 p-6 sm:grid-cols-2">
@@ -531,6 +544,70 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
           value={solutionPdf}
           onChange={setSolutionPdf}
         />
+      </section>
+
+      {/* ── Free case ───────────────────────────────────────── */}
+      <section className="grid gap-6 border border-noir-line bg-noir-raised/40 p-6">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            name="is_free"
+            checked={isFree}
+            onChange={(e) => setIsFree(e.target.checked)}
+            className="h-4 w-4 accent-[var(--color-brass)]"
+          />
+          <span>
+            <span className="block font-mono text-[11px] uppercase tracking-[0.16em] text-cream">Free case</span>
+            <span className="block text-xs text-ash">
+              No checkout: visitors leave an email, download the case PDF straight away, and get the answer page. Price is saved as ৳ 0.
+            </span>
+          </span>
+        </label>
+
+        {isFree && (
+          <>
+            <Field
+              label="Answer — Markdown"
+              name="answer_md"
+              hint="Shown on /cases/<slug>/answer to people who left an email. # heading, - list, **bold**, *italic*; blank line = new paragraph."
+            >
+              <textarea
+                id="answer_md"
+                name="answer_md"
+                rows={12}
+                maxLength={20000}
+                defaultValue={v("answer_md", initial?.answer_md ?? "")}
+                className={`${INPUT} font-mono text-xs leading-relaxed`}
+              />
+            </Field>
+
+            <Field
+              label="Answer locked until (Dhaka time)"
+              name="answer_unlock_at"
+              error={f.answer_unlock_at}
+              hint="Leave empty to show the answer straight away. While locked, the page shows a countdown and “Come back on … for the solution.”"
+            >
+              <input
+                id="answer_unlock_at"
+                name="answer_unlock_at"
+                type="datetime-local"
+                defaultValue={v("answer_unlock_at", toDhakaInput(initial?.answer_unlock_at))}
+                className={`${INPUT} font-mono`}
+              />
+            </Field>
+
+            <FileUpload
+              label="Answer image (optional)"
+              hint="Shown under the answer. Stored privately, served by short-lived link."
+              bucket={FILES_BUCKET}
+              folder="answers"
+              accept="image/jpeg,image/png,image/webp"
+              isPublic={false}
+              value={answerImage}
+              onChange={setAnswerImage}
+            />
+          </>
+        )}
       </section>
 
       {/* ── Visibility ───────────────────────────────────────── */}
