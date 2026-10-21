@@ -84,7 +84,7 @@ export default async function AnswerPage({ params, searchParams }: PageProps<"/c
     <TextPage eyebrow={`${freeCase.title} · The answer`} title="The answer.">
       {freeCase.answer_md ? (
         <div
-          className="prose-noir answer-md flex flex-col gap-4 text-[16px] leading-[1.8] text-ash"
+          className="prose-noir answer-md flex flex-col gap-4 text-[16px] leading-[1.8] text-ash [&_h2]:mb-2 [&_h2]:font-display [&_h2]:text-3xl [&_h2]:font-semibold [&_h2]:leading-tight [&_h2]:text-cream [&_h3]:mt-2 [&_h3]:font-display [&_h3]:text-xl [&_h3]:text-cream [&_h4]:font-display [&_h4]:text-lg [&_h4]:text-cream [&_strong]:text-cream"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(freeCase.answer_md) }}
         />
       ) : (
