@@ -90,7 +90,9 @@ export async function getPublishedCases(): Promise<CaseFile[]> {
     .select(PUBLIC_COLUMNS)
     .eq("published", true)
     .order("position", { ascending: true })
-    .order("created_at", { ascending: true });
+    // Tie-break on a column the anon role may read: since migration 0009 it
+    // sees only PUBLIC_COLUMNS, and ORDER BY needs SELECT on the column.
+    .order("case_number", { ascending: true });
 
   if (error) return publicFailure("getPublishedCases", error, []);
   return (data as CaseRow[]).map(rowToCaseFile);
