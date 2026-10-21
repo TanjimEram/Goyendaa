@@ -34,7 +34,11 @@ export async function generateMetadata({
   const { slug } = await params;
   const caseFile = await getPublishedCase(slug);
   if (!caseFile) return { title: "Case not found" };
-  const images = caseFile.thumbnail ? [{ url: caseFile.thumbnail, width: 1920, height: 1080, alt: caseFile.title }] : undefined;
+  // A page-level openGraph replaces the site default image, so fall back to
+  // it explicitly: a shared link without a picture barely gets clicked.
+  const images = caseFile.thumbnail
+    ? [{ url: caseFile.thumbnail, width: 1920, height: 1080, alt: caseFile.title }]
+    : [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Goyenda — printable detective case files" }];
   // Free cases say so in the share card: that's what earns the click.
   const shareTitle = caseFile.isFree ? `${caseFile.title} — a free case from Goyenda` : `${caseFile.title} — Goyenda`;
   const shareText = caseFile.isFree ? `Free case. ${caseFile.premise}` : caseFile.premise;
@@ -42,8 +46,8 @@ export async function generateMetadata({
     title: `${caseFile.title}`,
     description: shareText,
     // Without these, shared case links show the site-wide title and image.
-    openGraph: { type: "website", title: shareTitle, description: shareText, url: `/cases/${caseFile.slug}`, ...(images ? { images } : {}) },
-    twitter: { card: "summary_large_image", title: shareTitle, description: shareText, ...(images ? { images: images.map((i) => i.url) } : {}) },
+    openGraph: { type: "website", title: shareTitle, description: shareText, url: `/cases/${caseFile.slug}`, images },
+    twitter: { card: "summary_large_image", title: shareTitle, description: shareText, images: images.map((i) => i.url) },
   };
 }
 
@@ -313,15 +317,16 @@ export default async function CaseDetailPage({
                 {caseFile.code} &middot; {rank.label}
               </p>
               <p className="mt-2 font-display text-2xl text-cream sm:text-3xl">
-                Take <em className="text-brass not-italic">{caseFile.title}</em>{" "}
-                for {formatTaka(caseFile.priceBdt)}.
+                {caseFile.isFree ? "Play " : "Take "}
+                <em className="text-brass not-italic">{caseFile.title}</em>{" "}
+                {caseFile.isFree ? "free." : `for ${formatTaka(caseFile.priceBdt)}.`}
               </p>
             </div>
             <Link
-              href={checkoutHref(caseFile)}
+              href={caseFile.isFree ? "#play" : checkoutHref(caseFile)}
               className="group inline-flex shrink-0 items-center justify-center gap-3 bg-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp"
             >
-              Buy case file
+              {caseFile.isFree ? "Play free" : "Buy case file"}
               <span
                 aria-hidden
                 className="transition-transform duration-300 ease-noir group-hover:translate-x-1"
