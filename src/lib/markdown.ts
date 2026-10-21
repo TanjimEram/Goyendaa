@@ -14,22 +14,37 @@ function inline(s: string): string {
     .replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g, "$1<em>$2</em>");
 }
 
+type Run = { kind: "p" | "ul" | "ol" | "h"; lines: string[] };
+
+const UL = /^\s*[-*]\s+/;
+const OL = /^\s*\d+[.)]\s+/;
+const H = /^(#{1,3})\s+(.+)$/;
+
+/** Splits a block into runs, so "**Lead:**" followed by a list on the next
+ *  line (no blank line between) still renders as a paragraph + a list. */
+function runs(lines: string[]): Run[] {
+  const out: Run[] = [];
+  for (const line of lines) {
+    const kind = H.test(line) ? "h" : UL.test(line) ? "ul" : OL.test(line) ? "ol" : "p";
+    const last = out[out.length - 1];
+    if (last && last.kind === kind && kind !== "h") last.lines.push(line);
+    else out.push({ kind, lines: [line] });
+  }
+  return out;
+}
+
 export function renderMarkdown(src: string): string {
   const blocks = src.replace(/\r\n?/g, "\n").trim().split(/\n\s*\n/);
   return blocks
-    .map((block) => {
-      const lines = block.split("\n");
-      const h = block.match(/^(#{1,3})\s+(.+)$/);
-      if (h && lines.length === 1) {
-        const level = h[1].length + 1; // # → h2: the page already has an h1
-        return `<h${level}>${inline(h[2])}</h${level}>`;
+    .flatMap((block) => runs(block.split("\n")))
+    .map(({ kind, lines }) => {
+      if (kind === "h") {
+        const [, hashes, text] = lines[0].match(H)!;
+        const level = hashes.length + 1; // # → h2: the page already has an h1
+        return `<h${level}>${inline(text)}</h${level}>`;
       }
-      if (lines.every((l) => /^\s*[-*]\s+/.test(l))) {
-        return `<ul>${lines.map((l) => `<li>${inline(l.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
-      }
-      if (lines.every((l) => /^\s*\d+[.)]\s+/.test(l))) {
-        return `<ol>${lines.map((l) => `<li>${inline(l.replace(/^\s*\d+[.)]\s+/, ""))}</li>`).join("")}</ol>`;
-      }
+      if (kind === "ul") return `<ul>${lines.map((l) => `<li>${inline(l.replace(UL, ""))}</li>`).join("")}</ul>`;
+      if (kind === "ol") return `<ol>${lines.map((l) => `<li>${inline(l.replace(OL, ""))}</li>`).join("")}</ol>`;
       return `<p>${lines.map(inline).join("<br>")}</p>`;
     })
     .join("\n");
