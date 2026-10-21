@@ -236,6 +236,7 @@ open-next.config.ts             OpenNext adapter options (no ISR cache yet)
 - **Turnstile** on checkout + login (`src/components/Turnstile.tsx`, `src/lib/bot-guard.ts`). Off unless `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (build var) **and** `TURNSTILE_SECRET_KEY` (Worker secret) are both set. Scripted checkout tests need Cloudflare's always-pass test keys locally.
 - **Login throttle:** 5 failures/IP or 10/account per 15 min (`login_attempts`, migration 0010, hashed emails, purged by the cron).
 - **Logging:** use `logError` / `redact` from `src/lib/log.ts`, never `console.error(…, error)` with a raw Supabase error — its `details` holds row values (emails, TrxIDs).
+- **Meta Pixel + Conversions API** (`src/components/MetaPixel.tsx`, `src/lib/meta-capi.ts`). Pixel ID in `SITE.metaPixelId`. PageView on public pages, ViewContent on case pages, InitiateCheckout when checkout opens (once per session). **Never on `/admin` or `/orders/*`** — order URLs are bearer tokens and the Pixel sends the page URL. Purchase is server-only: `approveOrder` → `onOrderPaid` (Graph API v26.0, `ctx.waitUntil`, event_id = order id). Inert unless the `META_CAPI_TOKEN` secret is set; optional `META_TEST_EVENT_CODE`, `META_OPT_OUT_EMAILS`. Checkout-time IP / UA / `_fbp` / `_fbc` live on the order (migration 0011) only until approve/reject. The CSP blocks `fbevents.js`'s extra gateway endpoints on purpose.
 - **Downloads** are named `<slug>-<ORDER-CODE>.pdf`. A real in-PDF watermark is out of reach on the free Worker CPU budget.
 
 ### Solution delivery (the delayed-answer job)
