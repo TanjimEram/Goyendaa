@@ -19,6 +19,8 @@ function isPublicAdminPath(pathname: string) {
 export const CHECKOUT_SESSION_COOKIE = "gyd_cs";
 
 const TURNSTILE = "https://challenges.cloudflare.com";
+/** Meta Pixel: fbevents.js + its config script, and the /tr beacons. */
+const META = "https://connect.facebook.net https://www.facebook.com";
 
 /**
  * Nonce-based CSP. Next reads the nonce from the request header during
@@ -37,9 +39,9 @@ function contentSecurityPolicy(nonce: string, https: boolean): string {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${supabase}`,
+    `img-src 'self' data: blob: ${supabase} https://www.facebook.com`,
     "font-src 'self' data:",
-    `connect-src 'self' ${supabase} ${TURNSTILE}`,
+    `connect-src 'self' ${supabase} ${TURNSTILE} ${META}`,
     `media-src 'self' ${supabase}`,
     `frame-src ${TURNSTILE}`,
     "object-src 'none'",

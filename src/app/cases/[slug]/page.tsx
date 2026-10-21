@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CaseCard, DifficultyBadge } from "@/components/CaseCard";
+import { PixelEvent } from "@/components/MetaPixel";
 import {
   PurchaseBar,
   PurchasePanel,
@@ -68,6 +69,7 @@ export default async function CaseDetailPage({
   return (
     <>
       <SiteHeader />
+      <PixelEvent event="ViewContent" params={{ content_ids: [caseFile.slug], content_name: caseFile.title, content_type: "product", value: caseFile.priceBdt, currency: "BDT" }} />
       {/* pb on mobile keeps the footer clear of the pinned buy bar. */}
       <main className="flex flex-1 flex-col pb-24 lg:pb-0">
         {/* ── Case header ─────────────────────────────────────── */}

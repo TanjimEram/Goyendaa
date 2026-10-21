@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, IBM_Plex_Mono, Inter } from "next/font/google";
 import { connection } from "next/server";
+import { MetaPixel } from "@/components/MetaPixel";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-noir font-sans text-cream">
         {children}
+        <MetaPixel />
         {/* Film grain sits above everything; pointer-events are off. */}
         <div aria-hidden className="grain-overlay" />
       </body>

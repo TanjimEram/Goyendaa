@@ -19,7 +19,7 @@ export const SITE = {
   /** When a human actually answers the phone. */
   contactHours: "10 am \u2013 10 pm, Dhaka time",
   /** Shown on the legal pages. Bump when the wording changes. */
-  legalUpdated: "14 September 2026",
+  legalUpdated: "21 October 2026",
   /** The entity named in the terms. Sole trader until a licence exists. */
   operator: "Goyenda, an individual seller based in Dhaka, Bangladesh",
   /** Days the download stays available after approval. Enforced by the
@@ -28,4 +28,7 @@ export const SITE = {
   /** Plain-language promise for how fast a payment is checked. Shown on the
    *  checkout page, the pending page and the buyer's receipt email. */
   confirmationWindow: "usually within a few hours, between 9 am and 11 pm Dhaka time",
+  /** Meta Pixel (public). The Conversions API token is a Worker secret,
+   *  META_CAPI_TOKEN, and never reaches this file or the browser. */
+  metaPixelId: "1857907212032097",
 } as const;

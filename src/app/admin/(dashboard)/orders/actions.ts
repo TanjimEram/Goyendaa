@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buyerOrderApprovedMail, sendMail } from "@/lib/email";
 import { formatDateTimeBD } from "@/lib/orders";
+import { onOrderPaid, onOrderRejected } from "@/lib/meta-capi";
 import { caseDelayHours, getOrderByIdAdmin, solutionSendAt } from "@/lib/orders-data";
 import { sendSolutionNow } from "@/lib/solutions";
 import { SITE } from "@/lib/site";
@@ -65,6 +66,10 @@ export async function approveOrder(
     .select("id");
   if (error) return { error: error.message };
   if (!changed?.length) return { error: "Order was already approved or rejected — nothing changed." };
+
+  // Meta Purchase (Conversions API), in the background; inert without the
+  // META_CAPI_TOKEN secret. Only this click's change gets here, so once.
+  await onOrderPaid(order, approvedAt);
 
   refresh();
 
@@ -133,6 +138,7 @@ export async function rejectOrder(
   if (error) return { error: error.message };
   if (!data?.length) return { error: "Order wasn't pending — nothing changed." };
 
+  await onOrderRejected(id);
   refresh();
   return {};
 }

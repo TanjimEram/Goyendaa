@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DifficultyBadge } from "@/components/CaseCard";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { CopyButton } from "@/components/CopyButton";
+import { PixelEvent } from "@/components/MetaPixel";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { formatHours, formatTaka, solutionDelayHours } from "@/lib/cases";
@@ -55,6 +56,8 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[slu
   return (
     <>
       <SiteHeader />
+      {/* Checkout opened = checkout started; once per session per case. */}
+      <PixelEvent event="InitiateCheckout" params={{ content_ids: [caseFile.slug], content_name: caseFile.title, content_type: "product", value: caseFile.priceBdt, currency: "BDT" }} oncePerSession={`ic:${caseFile.slug}`} />
       <main className="flex flex-1 flex-col">
         <section className="mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
           <Link

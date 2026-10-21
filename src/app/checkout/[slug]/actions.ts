@@ -1,11 +1,13 @@
 "use server";
 
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPublishedCase } from "@/lib/cases-data";
 import { adminNewOrderMail, buyerOrderReceivedMail, sendMail } from "@/lib/email";
 import { orderEnv } from "@/lib/env";
 import { clientIp, passesTurnstile } from "@/lib/bot-guard";
 import { logError } from "@/lib/log";
+import { saveAttribution } from "@/lib/meta-capi";
 import {
   getOrderByIdService,
   normalizeOrderCode,
@@ -75,7 +77,8 @@ export async function submitManualPayment(
 
   if (Object.keys(fields).length) return { fields, values, error: "Fix the fields marked below." };
 
-  if (!(await passesTurnstile(formData, await clientIp()))) {
+  const ip = await clientIp();
+  if (!(await passesTurnstile(formData, ip))) {
     return { error: "Couldn't confirm you're human. Wait a moment and press the button again.", values };
   }
 
@@ -109,6 +112,16 @@ export async function submitManualPayment(
     logError("[checkout] submit failed", error);
     return { error: UNAVAILABLE, values };
   }
+
+  // For the server-side Purchase event at approval (no-op without the
+  // META_CAPI_TOKEN secret). Best-effort, never blocks the order.
+  const jar = await cookies();
+  await saveAttribution(saved.id, {
+    meta_fbp: jar.get("_fbp")?.value ?? null,
+    meta_fbc: jar.get("_fbc")?.value ?? null,
+    client_ip: ip === "unknown" ? null : ip,
+    client_user_agent: (await headers()).get("user-agent")?.slice(0, 512) ?? null,
+  });
 
   // Emails are best-effort: a failed send must never block the order.
   const { adminEmail } = await orderEnv();

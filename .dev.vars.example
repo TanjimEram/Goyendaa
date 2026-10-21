@@ -38,3 +38,11 @@ EMAIL_FROM=Goyenda <goyendaaa@gmail.com>
 # NEXT_PUBLIC_TURNSTILE_SITE_KEY are set. Local test secret that always
 # passes: 1x0000000000000000000000000000000AA
 TURNSTILE_SECRET_KEY=
+
+# Meta Conversions API (server-side Purchase). OFF unless the token is set:
+# no attribution captured, nothing sent, nothing logged. Worker secrets.
+META_CAPI_TOKEN=
+# Optional: Events Manager → Test events code, to see server events there.
+META_TEST_EVENT_CODE=
+# Optional: buyers who opted out (privacy §4), comma-separated emails.
+META_OPT_OUT_EMAILS=
