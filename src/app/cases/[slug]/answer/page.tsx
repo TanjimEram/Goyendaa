@@ -11,8 +11,6 @@ import { getPublishedCases } from "@/lib/cases-data";
 import { answerOpensAt, getFreeCase, leadCookie, leadForCase, leadHit } from "@/lib/leads";
 import { renderMarkdown } from "@/lib/markdown";
 import { formatDateTimeBD } from "@/lib/orders";
-import { FILES_BUCKET } from "@/lib/storage";
-import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -73,12 +71,8 @@ export default async function AnswerPage({ params, searchParams }: PageProps<"/c
 
   await leadHit(lead.token, "answer");
 
-  let imageUrl: string | null = null;
-  if (freeCase.answer_image_path) {
-    const supabase = await createServiceClient();
-    const { data } = await supabase.storage.from(FILES_BUCKET).createSignedUrl(freeCase.answer_image_path, 60 * 30);
-    imageUrl = data?.signedUrl ?? null;
-  }
+  // A public case-media URL with an unguessable name (see CaseRow).
+  const imageUrl = freeCase.answer_image_path;
 
   // Paid cases for the next step, Rookie first.
   const paid = (await getPublishedCases())
@@ -97,8 +91,7 @@ export default async function AnswerPage({ params, searchParams }: PageProps<"/c
         <p className="text-ash">The answer hasn&rsquo;t been posted yet. Check back soon.</p>
       )}
       {imageUrl && (
-        // Signed, short-lived URL from the private bucket: next/image would
-        // cache it past its expiry, so a plain img on purpose.
+        // Plain img: the optimiser would add nothing for one image here.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageUrl} alt="" className="mt-8 w-full border border-noir-line" />
       )}

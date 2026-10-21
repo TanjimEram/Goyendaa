@@ -618,11 +618,11 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
 
             <FileUpload
               label="Answer image (optional)"
-              hint="Shown under the answer. Stored privately, served by short-lived link."
-              bucket={FILES_BUCKET}
+              hint="Shown under the answer. Unguessable file name, never listed; only people past the answer gate see it."
+              bucket={MEDIA_BUCKET}
               folder="answers"
               accept="image/jpeg,image/png,image/webp"
-              isPublic={false}
+              isPublic
               value={answerImage}
               onChange={setAnswerImage}
             />

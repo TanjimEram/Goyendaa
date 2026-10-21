@@ -272,10 +272,10 @@ export async function deleteCase(formData: FormData) {
 
   // Best-effort storage cleanup. Failures here shouldn't block the delete;
   // an orphaned file is cheaper than a case that can't be removed.
-  const mediaPaths = [existing.thumbnail_url, ...existing.gallery_urls]
+  const mediaPaths = [existing.thumbnail_url, ...existing.gallery_urls, existing.answer_image_path]
     .map((u) => (u ? publicUrlToPath(u, MEDIA_BUCKET) : null))
     .filter((p): p is string => Boolean(p));
-  const filePaths = [existing.case_pdf_path, existing.solution_pdf_path, existing.answer_image_path].filter(
+  const filePaths = [existing.case_pdf_path, existing.solution_pdf_path].filter(
     (p): p is string => Boolean(p),
   );
   if (mediaPaths.length) await supabase.storage.from(MEDIA_BUCKET).remove(mediaPaths);

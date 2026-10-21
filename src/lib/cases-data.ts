@@ -32,7 +32,9 @@ export interface CaseRow {
   solution_delay_hours: number | null;
   /** Free case (migration 0012). Price is 0 when true. */
   is_free: boolean;
-  /** Free case answer page: Markdown, optional private image, lock time. */
+  /** Free case answer page: Markdown, optional image (a public case-media
+   *  URL with an unguessable name; the private bucket takes PDFs only),
+   *  lock time. */
   answer_md: string | null;
   answer_image_path: string | null;
   answer_unlock_at: string | null;
