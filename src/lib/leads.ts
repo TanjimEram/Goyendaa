@@ -27,7 +27,7 @@ export interface LeadRow extends Utm {
 
 export type FreeCase = Pick<
   CaseRow,
-  "id" | "slug" | "title" | "premise" | "price" | "case_pdf_path" | "answer_md" | "answer_image_path" | "answer_unlock_at" | "thumbnail_url"
+  "id" | "slug" | "title" | "premise" | "price" | "case_pdf_path" | "answer_md" | "answer_image_path" | "answer_unlock_at" | "answer_delay_minutes" | "thumbnail_url"
 >;
 
 /** httpOnly cookie that remembers a lead's token for one case. */
@@ -40,7 +40,7 @@ export async function getFreeCase(slug: string): Promise<FreeCase | null> {
   const supabase = await createServiceClient();
   const { data, error } = await supabase
     .from("cases")
-    .select("id, slug, title, premise, price, case_pdf_path, answer_md, answer_image_path, answer_unlock_at, thumbnail_url")
+    .select("id, slug, title, premise, price, case_pdf_path, answer_md, answer_image_path, answer_unlock_at, answer_delay_minutes, thumbnail_url")
     .eq("slug", slug)
     .eq("published", true)
     .eq("is_free", true)
@@ -177,7 +177,19 @@ export async function salesBySourceAdmin(): Promise<{ source: string; orders: nu
   return [...by.values()].sort((a, b) => b.revenue - a.revenue);
 }
 
-/** True while a free case's answer is held back (answer_unlock_at ahead). */
-export function answerLocked(unlockAt: string | null): boolean {
-  return Boolean(unlockAt) && Date.parse(unlockAt!) > Date.now();
+/**
+ * When this visitor's answer opens, or null if it's open now. Two holds,
+ * the later wins: a fixed date (answer_unlock_at, e.g. 48 h after a post)
+ * and a per-visitor delay counted from when they got the case.
+ */
+export function answerOpensAt(
+  freeCase: Pick<FreeCase, "answer_unlock_at" | "answer_delay_minutes">,
+  gotCaseAt: string | Date,
+): string | null {
+  const fixed = freeCase.answer_unlock_at ? Date.parse(freeCase.answer_unlock_at) : 0;
+  const delay = freeCase.answer_delay_minutes
+    ? new Date(gotCaseAt).getTime() + freeCase.answer_delay_minutes * 60_000
+    : 0;
+  const opens = Math.max(fixed, delay);
+  return opens > Date.now() ? new Date(opens).toISOString() : null;
 }

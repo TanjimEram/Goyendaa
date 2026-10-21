@@ -8,7 +8,7 @@ import { SolutionCountdown } from "@/components/SolutionCountdown";
 import { TextPage } from "@/components/TextPage";
 import { RANK_ORDER, formatTaka } from "@/lib/cases";
 import { getPublishedCases } from "@/lib/cases-data";
-import { answerLocked, getFreeCase, leadCookie, leadForCase, leadHit } from "@/lib/leads";
+import { answerOpensAt, getFreeCase, leadCookie, leadForCase, leadHit } from "@/lib/leads";
 import { renderMarkdown } from "@/lib/markdown";
 import { formatDateTimeBD } from "@/lib/orders";
 import { FILES_BUCKET } from "@/lib/storage";
@@ -51,8 +51,9 @@ export default async function AnswerPage({ params, searchParams }: PageProps<"/c
     );
   }
 
-  const unlockAt = freeCase.answer_unlock_at;
-  if (unlockAt && answerLocked(unlockAt)) {
+  // Held back until the later of a fixed date and this visitor's own delay.
+  const unlockAt = answerOpensAt(freeCase, lead.created_at);
+  if (unlockAt) {
     const when = formatDateTimeBD(unlockAt);
     return (
       <TextPage

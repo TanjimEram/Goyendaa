@@ -11,7 +11,15 @@ alter table public.cases
   add column if not exists is_free boolean not null default false,
   add column if not exists answer_md text,            -- the answer page, Markdown
   add column if not exists answer_image_path text,    -- private bucket path
-  add column if not exists answer_unlock_at timestamptz;  -- null = unlocked
+  add column if not exists answer_unlock_at timestamptz,  -- null = no fixed date
+  -- Per visitor: the answer opens N minutes after THEY got the case (their
+  -- lead's created_at). Combined with answer_unlock_at, the later one wins.
+  add column if not exists answer_delay_minutes integer;
+
+alter table public.cases drop constraint if exists cases_answer_delay_range;
+alter table public.cases
+  add constraint cases_answer_delay_range
+  check (answer_delay_minutes is null or answer_delay_minutes between 0 and 10080);
 
 alter table public.cases drop constraint if exists cases_free_is_zero;
 alter table public.cases

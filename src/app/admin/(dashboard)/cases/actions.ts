@@ -41,6 +41,7 @@ const ECHOED_FIELDS = [
   "is_free",
   "answer_md",
   "answer_unlock_at",
+  "answer_delay_minutes",
   "contents_text",
   "purchase_info",
   "delivery_info",
@@ -81,6 +82,7 @@ interface CaseWrite {
   answer_md: string | null;
   answer_image_path: string | null;
   answer_unlock_at: string | null;
+  answer_delay_minutes: number | null;
 }
 
 async function requireAdmin() {
@@ -131,6 +133,13 @@ function parseCaseForm(fd: FormData):
   const unlockRaw = str(fd, "answer_unlock_at");
   const unlockMs = unlockRaw ? Date.parse(`${unlockRaw}:00+06:00`) : NaN;
   if (unlockRaw && Number.isNaN(unlockMs)) fields.answer_unlock_at = "Pick a date and time, or leave it empty.";
+
+  // "Answer opens after N minutes", per visitor. Empty = no wait.
+  const delayMinRaw = str(fd, "answer_delay_minutes");
+  const answerDelay = delayMinRaw === "" ? null : Number(delayMinRaw);
+  if (answerDelay !== null && !(Number.isInteger(answerDelay) && answerDelay >= 0 && answerDelay <= 10080)) {
+    fields.answer_delay_minutes = "Whole minutes, 0 to 10080 (a week), or leave it empty.";
+  }
 
   const difficulty_rank = str(fd, "difficulty_rank");
   if (!isRank(difficulty_rank)) fields.difficulty_rank = "Pick a rank.";
@@ -188,6 +197,7 @@ function parseCaseForm(fd: FormData):
       answer_md: is_free ? str(fd, "answer_md").slice(0, 20000) || null : null,
       answer_image_path: is_free ? str(fd, "answer_image_path") || null : null,
       answer_unlock_at: is_free && unlockRaw && !Number.isNaN(unlockMs) ? new Date(unlockMs).toISOString() : null,
+      answer_delay_minutes: is_free ? answerDelay : null,
     },
   };
 }
@@ -334,7 +344,7 @@ function dbErrorState(message: string): CaseFormState {
   if (message.includes("cases_free_is_zero")) {
     return { error: "A free case must have price 0." };
   }
-  if (/is_free|answer_md|answer_image_path|answer_unlock_at/.test(message)) {
+  if (/is_free|answer_md|answer_image_path|answer_unlock_at|answer_delay_minutes/.test(message)) {
     return { error: "Run supabase/migrations/0012_free_cases.sql first." };
   }
   if (message.includes("solution_delay_hours")) {

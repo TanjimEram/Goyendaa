@@ -36,6 +36,8 @@ export interface CaseRow {
   answer_md: string | null;
   answer_image_path: string | null;
   answer_unlock_at: string | null;
+  /** Answer opens this many minutes after each visitor got the case. */
+  answer_delay_minutes: number | null;
   page_count: number;
   created_at: string;
   updated_at: string;

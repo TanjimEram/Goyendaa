@@ -38,6 +38,7 @@ const FIELD_LABELS: Record<string, string> = {
   solution_delay_hours: "Solution delay",
   page_count: "Printed pages",
   answer_unlock_at: "Answer locked until",
+  answer_delay_minutes: "Answer opens after",
 };
 
 /** Our wording for a native constraint failure, instead of the browser's. */
@@ -592,6 +593,25 @@ export function CaseForm({ initial, defaultRank }: { initial?: CaseRow; defaultR
                 name="answer_unlock_at"
                 type="datetime-local"
                 defaultValue={v("answer_unlock_at", toDhakaInput(initial?.answer_unlock_at))}
+                className={`${INPUT} font-mono`}
+              />
+            </Field>
+
+            <Field
+              label="Answer opens after (minutes)"
+              name="answer_delay_minutes"
+              error={f.answer_delay_minutes}
+              hint="Per visitor, counted from when they get the case — e.g. 10. Empty = no wait. If a lock date is also set, the later of the two applies."
+            >
+              <input
+                id="answer_delay_minutes"
+                name="answer_delay_minutes"
+                type="number"
+                min={0}
+                max={10080}
+                step={1}
+                inputMode="numeric"
+                defaultValue={v("answer_delay_minutes", initial?.answer_delay_minutes ?? "")}
                 className={`${INPUT} font-mono`}
               />
             </Field>

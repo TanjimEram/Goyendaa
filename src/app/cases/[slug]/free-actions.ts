@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { inBackground } from "@/lib/background";
 import { clientIp, ipLimited, passesTurnstile } from "@/lib/bot-guard";
 import { freeCaseMail, sendMail } from "@/lib/email";
-import { answerLocked, getFreeCase, leadCookie, upsertLead } from "@/lib/leads";
+import { answerOpensAt, getFreeCase, leadCookie, upsertLead } from "@/lib/leads";
 import { logError } from "@/lib/log";
 import { formatDateTimeBD } from "@/lib/orders";
 import { SITE } from "@/lib/site";
@@ -88,7 +88,7 @@ export async function claimFreeCase(_prev: ClaimState, formData: FormData): Prom
   // Skipped quietly by sendMail when no email provider is configured.
   if (lead.created) {
     const base = `${SITE.url}/cases/${freeCase.slug}`;
-    const locked = answerLocked(freeCase.answer_unlock_at);
+    const opensAt = answerOpensAt(freeCase, new Date());
     await inBackground(
       sendMail({
         to: email,
@@ -97,7 +97,7 @@ export async function claimFreeCase(_prev: ClaimState, formData: FormData): Prom
           caseTitle: freeCase.title,
           downloadUrl: `${base}/download?t=${lead.token}`,
           answerUrl: `${base}/answer?t=${lead.token}`,
-          answerUnlocksText: locked ? formatDateTimeBD(freeCase.answer_unlock_at!) : null,
+          answerUnlocksText: opensAt ? formatDateTimeBD(opensAt) : null,
           unsubscribeUrl: `${SITE.url}/unsubscribe?t=${lead.token}`,
         }),
       }),
