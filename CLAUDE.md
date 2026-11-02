@@ -20,6 +20,8 @@ This is a legal and ethical requirement, not a style preference. Treat any case 
 
 Case PDFs are built in the sibling repo **`../Goyenda-Studio`**, not here. **When creating, editing or shortening any Goyenda case, read and follow `../Goyenda-Studio/docs/CASE_RULES.md`** (length per tier, one page per document, word limits, merge and clue rules), plus that repo's `CLAUDE.md`.
 
+**For all video work (reels, shorts, video posts), read and follow `../Goyenda-Studio/REEL_STYLE.md`.** Reels are built in `../Goyenda-Studio/reel-engine/` (Remotion).
+
 ---
 
 ## Audience & commercial constraints

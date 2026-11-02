@@ -21,6 +21,21 @@
         "8787"
       ],
       "port": 8787
+    },
+    {
+      "name": "Remotion Studio (reel-engine)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "F:/PP/Goyenda-Studio/reel-engine",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3010",
+        "--no-open"
+      ],
+      "port": 3010
     }
   ]
 }
