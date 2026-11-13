@@ -1,0 +1,214 @@
+/* ============================================================
+   TEXTURE MOCKUP — halftone dots + baked grain, scoped to .tx-mock.
+   Nothing here touches the real components' files: it styles them
+   from outside through wrapper classes (.tx-hero, .tx-sec, .tx-cards,
+   .tx-footer) and data attributes on the .tx-mock wrapper:
+     data-tx="off|subtle|medium"          off = the current site
+     data-hero/-sections/-cards/-buttons/-footer/-social = "on|off"
+     data-dot="neutral|gold|red"          dot colour
+     data-lite      Save-Data / low-end: no dots on large areas
+     data-still     reduced motion: no hover fades
+   Dots: two offset radial-gradient grids (a 45° halftone screen),
+   faded with mask-image. Grain: one 12.7 KB WebP tile with
+   transparent noise, so it layers with no blend mode at all.
+   No filter, no mix-blend-mode, no feTurbulence anywhere.
+   ============================================================ */
+
+.tx-mock {
+  --tx-dot-size: 8px; /* panel slider */
+  --tx-dot-a: 0.1; /* panel slider: dot opacity before intensity */
+  --tx-k: 1; /* intensity multiplier */
+  --tx-dot-base: var(--color-cream);
+  --tx-dot: color-mix(in srgb, var(--tx-dot-base) calc(var(--tx-dot-a) * var(--tx-k) * 100%), transparent);
+  --tx-r: calc(var(--tx-dot-size) * 0.27);
+  --tx-grain: url("/textures/grain.webp");
+  --tx-hover: 0.35; /* card dots on hover */
+}
+.tx-mock[data-tx="medium"] {
+  --tx-k: 1.7;
+  --tx-hover: 0.5;
+}
+.tx-mock[data-dot="gold"] {
+  --tx-dot-base: var(--color-brass);
+}
+.tx-mock[data-dot="red"] {
+  --tx-dot-base: var(--color-blood);
+}
+
+/* The halftone screen, shared by every dotted surface. */
+.tx-mock:not([data-tx="off"])[data-hero="on"]:not([data-lite]) .tx-hero > section::before,
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::before,
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::after,
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::after,
+.tx-mock:not([data-tx="off"])[data-social="on"] .tx-social-dots {
+  background-image:
+    radial-gradient(circle, var(--tx-dot) var(--tx-r), transparent calc(var(--tx-r) + 0.75px)),
+    radial-gradient(circle, var(--tx-dot) var(--tx-r), transparent calc(var(--tx-r) + 0.75px));
+  background-size: var(--tx-dot-size) var(--tx-dot-size);
+  background-position: 0 0, calc(var(--tx-dot-size) / 2) calc(var(--tx-dot-size) / 2);
+}
+
+/* ── 1. Hero ───────────────────────────────────────────────────
+   Dots from the top-right corner (away from the copy), under the
+   content (z-10) and over the scrim; grain rides on the hero's own
+   vignette pseudo-element, whose gradient is restated here. */
+.tx-mock:not([data-tx="off"])[data-hero="on"]:not([data-lite]) .tx-hero > section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(120% 95% at 100% 0%, black 0%, transparent 60%);
+  mask-image: radial-gradient(120% 95% at 100% 0%, black 0%, transparent 60%);
+}
+@media (max-width: 639px) {
+  .tx-mock:not([data-tx="off"])[data-hero="on"]:not([data-lite]) .tx-hero > section::before {
+    -webkit-mask-image: radial-gradient(95% 32% at 100% 0%, black 0%, transparent 100%);
+    mask-image: radial-gradient(95% 32% at 100% 0%, black 0%, transparent 100%);
+  }
+}
+.tx-mock:not([data-tx="off"])[data-hero="on"] .tx-hero > section::after {
+  background:
+    var(--tx-grain) 0 0 / 200px 200px,
+    radial-gradient(ellipse at 50% 38%, transparent 30%, rgba(0, 0, 0, 0.62) 100%);
+}
+.tx-mock[data-tx="medium"][data-hero="on"] .tx-hero > section::after {
+  background:
+    var(--tx-grain) 0 0 / 200px 200px,
+    var(--tx-grain) 97px 61px / 200px 200px,
+    radial-gradient(ellipse at 50% 38%, transparent 30%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+/* ── 2. Section transitions ────────────────────────────────────
+   The hard top/bottom rules of the lighter bands go; a 72px dot
+   strip thickens toward the band above it and thins out below it. */
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec {
+  position: relative;
+}
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec > section {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::before,
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 72px;
+  pointer-events: none;
+}
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::before {
+  bottom: 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black);
+  mask-image: linear-gradient(to bottom, transparent, black);
+}
+.tx-mock:not([data-tx="off"])[data-sections="on"]:not([data-lite]) .tx-sec::after {
+  top: 100%;
+  -webkit-mask-image: linear-gradient(to top, transparent, black);
+  mask-image: linear-gradient(to top, transparent, black);
+}
+
+/* ── 3. Case cards ─────────────────────────────────────────────
+   Bottom 65% of the preview: a dark scrim + grain (::before, static)
+   and the dots (::after), which fade on hover by opacity alone.
+   Both sit above the thumbnail, below the badges. */
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child > div.absolute {
+  z-index: 2;
+}
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::before,
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::after {
+  content: "";
+  position: absolute;
+  inset: 35% 0 0 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::before {
+  background:
+    var(--tx-grain) 0 0 / 200px 200px,
+    linear-gradient(to bottom, transparent, color-mix(in srgb, var(--color-noir) 82%, transparent));
+}
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::after {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 75%);
+  mask-image: linear-gradient(to bottom, transparent, black 75%);
+  transition: opacity 0.35s var(--ease-noir);
+}
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards li:hover article > div:first-child::after,
+.tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards li:focus-within article > div:first-child::after {
+  opacity: var(--tx-hover);
+}
+
+/* ── 4. Buy button + difficulty badges ─────────────────────────
+   Blood → a darker blood, never lighter, so cream labels only gain
+   contrast. Grain is the tile at its own (low) strength. */
+.tx-mock:not([data-tx="off"])[data-buttons="on"] a.bg-blood {
+  background-image:
+    var(--tx-grain),
+    linear-gradient(160deg, var(--color-blood) 0%, color-mix(in srgb, var(--color-blood) 78%, black) 100%);
+  background-size: 200px 200px, 100% 100%;
+}
+.tx-mock:not([data-tx="off"])[data-buttons="on"] a.bg-blood:hover {
+  background-image:
+    var(--tx-grain),
+    linear-gradient(160deg, var(--color-blood-hot) 0%, var(--color-blood) 100%);
+}
+.tx-mock:not([data-tx="off"])[data-buttons="on"] span.border-brass\/70 {
+  background-image:
+    var(--tx-grain),
+    linear-gradient(120deg, color-mix(in srgb, var(--color-blood) 30%, var(--color-noir)) 0%, var(--color-noir) 75%);
+  background-size: 200px 200px, 100% 100%;
+}
+
+/* ── 5. Footer ─────────────────────────────────────────────────
+   Heavy grain (two offset tiles) over a fall from the page charcoal
+   to near-black. Starts at noir, not the lighter footer tint: the
+   footer's small ash links have little contrast to spare. Static. */
+.tx-mock:not([data-tx="off"])[data-footer="on"] .tx-footer > footer {
+  background-image:
+    var(--tx-grain),
+    var(--tx-grain),
+    linear-gradient(to bottom, var(--color-noir), color-mix(in srgb, var(--color-noir) 35%, black) 100%);
+  background-size: 200px 200px, 200px 200px, 100% 100%;
+  background-position: 0 0, 103px 57px, 0 0;
+}
+.tx-mock[data-tx="medium"][data-footer="on"] .tx-footer > footer {
+  background-image:
+    var(--tx-grain),
+    var(--tx-grain),
+    linear-gradient(to bottom, var(--color-noir), color-mix(in srgb, var(--color-noir) 15%, black) 100%);
+}
+
+/* ── 6. Social post previews (built at 1080 px, shown scaled) ── */
+.tx-social-frame {
+  position: relative;
+  overflow: hidden;
+  width: 1080px;
+  background: linear-gradient(160deg, var(--color-noir-raised), var(--color-noir) 70%);
+  transform: scale(var(--tx-social-scale));
+  transform-origin: top left;
+}
+.tx-social-dots {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: radial-gradient(110% 80% at 100% 0%, black 0%, transparent 65%);
+  mask-image: radial-gradient(110% 80% at 100% 0%, black 0%, transparent 65%);
+}
+.tx-social-grain {
+  position: absolute;
+  inset: 0;
+}
+.tx-mock:not([data-tx="off"])[data-social="on"] .tx-social-grain {
+  background: var(--tx-grain) 0 0 / 200px 200px;
+}
+
+/* Reduced motion: the only motion here is the card hover fade. Same
+   selector weight as the rule that sets the transition, or it loses. */
+.tx-mock:not([data-tx="off"])[data-cards="on"][data-still] .tx-cards article > div:first-child::after {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tx-mock:not([data-tx="off"])[data-cards="on"] .tx-cards article > div:first-child::after {
+    transition: none;
+  }
+}
