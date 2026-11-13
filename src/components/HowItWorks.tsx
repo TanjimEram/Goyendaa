@@ -20,7 +20,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="scroll-mt-20 border-y border-noir-line bg-noir-raised/40"
+      className="halftone-seams relative scroll-mt-20 border-y border-noir-line bg-noir-raised/40"
     >
       <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-24">
         <p className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-brass">

@@ -11,7 +11,7 @@ export function FreeCases({ cases }: { cases: CaseFile[] }) {
     <section
       id="free"
       aria-labelledby="free-heading"
-      className="scroll-mt-20 border-y border-brass/40 bg-noir-raised/60"
+      className="halftone-seams relative scroll-mt-20 border-y border-brass/40 bg-noir-raised/60"
     >
       <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
         <p className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-brass">

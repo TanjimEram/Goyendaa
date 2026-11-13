@@ -106,6 +106,8 @@ Full component-level spec lives in **`STYLE_GUIDE.md`**. Read it before building
 - **Fonts** — headlines Bodoni Moda, body Inter, case metadata/tags IBM Plex Mono.
 - **Motifs** — subtle film grain, vignette lighting on the hero, manila-folder / stamped-document styling on case cards, evidence-board layout for the catalog.
 
+**Print textures** (approved 2026-11-13, "PRINT TEXTURES" in `globals.css`): halftone dots (CSS radial-gradient screen + mask fade, neutral cream at 10%, 8px) and one baked grain tile `public/textures/grain.webp` (12.7 KB transparent noise from `scripts/make-grain-tile.mjs`, laid on as a plain background — no blend mode, filter or feTurbulence). Applied to: hero corner (`.halftone-corner` + `.grain`), the seams of the lighter homepage bands (`.halftone-seams` on FreeCases / HowItWorks), primary red buttons (`grain-blood hover:grain-blood-hot`), `DifficultyBadge grain` outside case cards, the footer (`.grain-footer`; `<SiteFooter plain />` on checkout and orders). **Never** on case cards, body text, checkout/orders or admin. `html[data-lite]` (Save-Data header in the root layout, or ≤4 cores / ≤2 GB via `LowEndFlag`) drops the dots on large areas and keeps the grain. Light grain specks are capped at 3.5% alpha: the footer's small `text-ash` links only have ~5:1 to spare.
+
 ⚠️ **Blood red is a fill colour, never a text colour** — `#B3231C` on `#121110` is 2.9:1 and fails WCAG AA. Use it behind cream text, as a rule, or as large `aria-hidden` decoration.
 
 ---
@@ -177,6 +179,7 @@ src/app/{terms,privacy,refunds}/  legal pages — DRAFTS, see note in terms
 src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
 src/components/TextPage.tsx     frame + <Section> for prose pages
 src/components/MobileNav.tsx    hamburger panel below md (client island)
+src/components/LowEndFlag.tsx   sets html[data-lite] on low-end phones (textures)
 src/lib/site.ts                 SITE: url (metadataBase), contact email /
                                 phone / hours, legal date, operator,
                                 download + confirmation windows
@@ -205,6 +208,9 @@ supabase/migrations/0002_case_copy.sql   per-case copy: purchase_info,
 supabase/migrations/0003_reorder.sql   reorder_cases(uuid[]) RPC
 supabase/seed.sql               the eight placeholder cases
 public/hero-poster.svg          generated noir hero backdrop (venetian-blind light)
+public/textures/grain.webp      grain tile (scripts/make-grain-tile.mjs)
+src/app/dev/hero-mockup/        DEV-ONLY ambient-motion hero study (404 in prod,
+                                awaiting approval)
 public/logo-mark.png            transparent, trimmed brand mark (from icon.png)
                                 used in SiteHeader next to the wordmark
 wrangler.jsonc                  Cloudflare Worker config (name, compat, assets)

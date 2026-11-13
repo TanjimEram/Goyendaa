@@ -145,7 +145,7 @@ export default async function CaseDetailPage({
                     title={rank.tagline}
                     className="inline-flex items-center gap-2 transition-opacity duration-300 ease-noir hover:opacity-80"
                   >
-                    <DifficultyBadge rank={caseFile.rank} />
+                    <DifficultyBadge rank={caseFile.rank} grain />
                     <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ash underline decoration-brass-dim underline-offset-4">
                       What does this mean?
                     </span>
@@ -324,7 +324,7 @@ export default async function CaseDetailPage({
             </div>
             <Link
               href={caseFile.isFree ? "#play" : checkoutHref(caseFile)}
-              className="group inline-flex shrink-0 items-center justify-center gap-3 bg-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp"
+              className="group inline-flex shrink-0 items-center justify-center gap-3 bg-blood grain-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:grain-blood-hot hover:shadow-stamp"
             >
               {caseFile.isFree ? "Play free" : "Buy case file"}
               <span

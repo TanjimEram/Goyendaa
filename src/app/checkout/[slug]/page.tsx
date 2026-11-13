@@ -183,7 +183,7 @@ export default async function CheckoutPage({ params }: PageProps<"/checkout/[slu
           </div>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter plain />
     </>
   );
 }

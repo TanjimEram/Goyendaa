@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, IBM_Plex_Mono, Inter } from "next/font/google";
+import { headers } from "next/headers";
 import { connection } from "next/server";
+import { LowEndFlag } from "@/components/LowEndFlag";
 import { MetaPixel } from "@/components/MetaPixel";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -55,14 +57,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // blocked by the policy. Costs nothing that matters: the few static
   // pages (terms, FAQ …) are tiny.
   await connection();
+  // Save-Data: lighter print textures from the first byte (see LowEndFlag).
+  const saveData = (await headers()).get("save-data") === "on";
   return (
     <html
       lang="en"
+      data-lite={saveData ? "1" : undefined}
       className={`${bodoni.variable} ${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-noir font-sans text-cream">
         {children}
         <MetaPixel />
+        <LowEndFlag />
         {/* Film grain sits above everything; pointer-events are off. */}
         <div aria-hidden className="grain-overlay" />
       </body>

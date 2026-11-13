@@ -71,6 +71,11 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
         className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-noir to-transparent"
       />
 
+      {/* Print texture: halftone dots from the far corner, then grain. Both
+          sit under the copy (z-10); globals.css, "PRINT TEXTURES". */}
+      <div aria-hidden className="halftone-corner absolute inset-0" />
+      <div aria-hidden className="grain absolute inset-0" />
+
       {/* ── Content ─────────────────────────────────────────── */}
       <div className="relative z-10 mx-auto w-full max-w-6xl px-5 py-24 sm:px-8 sm:py-28">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.22em] text-brass">
@@ -99,7 +104,7 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
         <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
           <Link
             href="/cases"
-            className="group inline-flex items-center justify-center gap-3 bg-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp"
+            className="group inline-flex items-center justify-center gap-3 bg-blood grain-blood px-7 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:grain-blood-hot hover:shadow-stamp"
           >
             Open a case
             <span

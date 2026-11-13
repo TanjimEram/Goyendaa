@@ -9,12 +9,18 @@ import {
   type CaseFile,
 } from "@/lib/cases";
 
-/** Brass pill carrying the rank name and a 3-pip difficulty meter. */
-export function DifficultyBadge({ rank }: { rank: CaseFile["rank"] }) {
+/**
+ * Brass pill carrying the rank name and a 3-pip difficulty meter.
+ * `grain` gives it the print texture (case page header, buy box); case
+ * cards keep the plain, see-through version over their thumbnail.
+ */
+export function DifficultyBadge({ rank, grain = false }: { rank: CaseFile["rank"]; grain?: boolean }) {
   const { label, pips } = RANKS[rank];
 
   return (
-    <span className="inline-flex items-center gap-2 border border-brass/70 bg-noir/85 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-brass backdrop-blur-sm">
+    <span
+      className={`inline-flex items-center gap-2 border border-brass/70 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-brass ${grain ? "grain-badge" : "bg-noir/85 backdrop-blur-sm"}`}
+    >
       {label}
       <span className="flex gap-[3px]" aria-hidden>
         {[0, 1, 2].map((i) => (

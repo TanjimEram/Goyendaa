@@ -246,7 +246,7 @@ export default async function OrderPage({ params }: PageProps<"/orders/[token]">
           </div>
         </section>
       </main>
-      <SiteFooter />
+      <SiteFooter plain />
     </>
   );
 }

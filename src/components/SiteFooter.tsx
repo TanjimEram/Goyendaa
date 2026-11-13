@@ -33,11 +33,12 @@ const FOOTER_COLUMNS = [
   },
 ];
 
-export function SiteFooter() {
+/** `plain` drops the print texture: checkout and order pages stay clean. */
+export function SiteFooter({ plain = false }: { plain?: boolean }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto border-t border-noir-line bg-noir-raised/40">
+    <footer className={`mt-auto border-t border-noir-line ${plain ? "bg-noir-raised/40" : "grain-footer"}`}>
       <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           {/* Brand */}

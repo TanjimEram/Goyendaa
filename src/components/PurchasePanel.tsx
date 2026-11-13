@@ -33,7 +33,7 @@ export function checkoutHref(caseFile: CaseFile) {
 }
 
 const BUY_BUTTON =
-  "group inline-flex items-center justify-center gap-3 bg-blood px-6 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:shadow-stamp";
+  "group inline-flex items-center justify-center gap-3 bg-blood grain-blood px-6 py-4 font-mono text-xs uppercase tracking-[0.18em] text-cream transition-all duration-300 ease-noir hover:-translate-x-0.5 hover:-translate-y-0.5 hover:bg-blood-hot hover:grain-blood-hot hover:shadow-stamp";
 
 /**
  * The buy box. Sticky beside the content on large screens; on small screens
@@ -56,7 +56,7 @@ export function PurchasePanel({ caseFile }: { caseFile: CaseFile }) {
             {formatTaka(caseFile.priceBdt)}
           </p>
         </div>
-        <DifficultyBadge rank={caseFile.rank} />
+        <DifficultyBadge rank={caseFile.rank} grain />
       </div>
 
       <dl className="mt-6 grid grid-cols-3 gap-3 border-y border-noir-line py-4 font-mono text-[10px] uppercase tracking-[0.14em]">

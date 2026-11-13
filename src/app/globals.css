@@ -139,6 +139,124 @@
   background-position: 14px 14px;
 }
 
+/* ============================================================
+   PRINT TEXTURES — halftone dots + baked grain
+   Approved from the /dev/texture-mockup study (2026-11-13).
+   Dots: a CSS 45° screen (two offset radial-gradient grids) faded
+   with mask-image. Grain: ONE 200px transparent-noise WebP
+   (public/textures/grain.webp, scripts/make-grain-tile.mjs), laid
+   on as a plain background layer: no blend mode, no filter, no
+   feTurbulence, nothing animated.
+   Where: hero corner, the seams of the lighter homepage bands, the
+   primary red buttons, difficulty badges outside case cards, the
+   footer. Never on case cards, body text, checkout/orders or admin.
+   html[data-lite] (Save-Data or a low-end device, see LowEndFlag)
+   drops the dots on large areas and keeps the grain.
+   ============================================================ */
+
+:root {
+  --grain-tile: url("/textures/grain.webp");
+  --halftone-size: 8px;
+  --halftone-dot: color-mix(in srgb, var(--color-cream) 10%, transparent);
+  --halftone-r: calc(var(--halftone-size) * 0.27);
+}
+
+.halftone-corner,
+html:not([data-lite]) .halftone-seams::before,
+html:not([data-lite]) .halftone-seams::after {
+  background-image:
+    radial-gradient(circle, var(--halftone-dot) var(--halftone-r), transparent calc(var(--halftone-r) + 0.75px)),
+    radial-gradient(circle, var(--halftone-dot) var(--halftone-r), transparent calc(var(--halftone-r) + 0.75px));
+  background-size: var(--halftone-size) var(--halftone-size);
+  background-position: 0 0, calc(var(--halftone-size) / 2) calc(var(--halftone-size) / 2);
+}
+
+/* Dots from the top-right corner, away from the hero copy. On phones the
+   copy spans the width, so they stay in the top band, clear of the
+   paragraph. Apply to an absolute, aria-hidden layer. */
+.halftone-corner {
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(95% 32% at 100% 0%, black 0%, transparent 100%);
+  mask-image: radial-gradient(95% 32% at 100% 0%, black 0%, transparent 100%);
+}
+@media (min-width: 640px) {
+  .halftone-corner {
+    -webkit-mask-image: radial-gradient(120% 95% at 100% 0%, black 0%, transparent 60%);
+    mask-image: radial-gradient(120% 95% at 100% 0%, black 0%, transparent 60%);
+  }
+}
+html[data-lite] .halftone-corner {
+  display: none;
+}
+
+.grain {
+  pointer-events: none;
+  background: var(--grain-tile) 0 0 / 200px 200px;
+}
+
+/* A lighter band that blends into the page like print: its hard top and
+   bottom rules give way to 72px dot strips. Put on a `relative` section
+   that keeps its border classes: on lite devices the borders come back. */
+html:not([data-lite]) .halftone-seams {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+html:not([data-lite]) .halftone-seams::before,
+html:not([data-lite]) .halftone-seams::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 72px;
+  pointer-events: none;
+}
+html:not([data-lite]) .halftone-seams::before {
+  bottom: 100%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black);
+  mask-image: linear-gradient(to bottom, transparent, black);
+}
+html:not([data-lite]) .halftone-seams::after {
+  top: 100%;
+  -webkit-mask-image: linear-gradient(to top, transparent, black);
+  mask-image: linear-gradient(to top, transparent, black);
+}
+
+/* Primary red buttons: blood into a darker blood (never lighter, so the
+   cream label only gains contrast), grained. Utilities, for `hover:`. */
+@utility grain-blood {
+  background-image:
+    var(--grain-tile),
+    linear-gradient(160deg, var(--color-blood) 0%, color-mix(in srgb, var(--color-blood) 78%, black) 100%);
+  background-size: 200px 200px, 100% 100%;
+}
+@utility grain-blood-hot {
+  background-image:
+    var(--grain-tile),
+    linear-gradient(160deg, var(--color-blood-hot) 0%, var(--color-blood) 100%);
+  background-size: 200px 200px, 100% 100%;
+}
+
+/* Difficulty badge (outside case cards): a faint red-to-charcoal grain. */
+.grain-badge {
+  background-color: var(--color-noir);
+  background-image:
+    var(--grain-tile),
+    linear-gradient(120deg, color-mix(in srgb, var(--color-blood) 30%, var(--color-noir)) 0%, var(--color-noir) 75%);
+  background-size: 200px 200px, 100% 100%;
+}
+
+/* Footer: heavy grain over a fall from the page charcoal to near-black.
+   Starts at noir: the footer's small ash links have little contrast to
+   spare. */
+.grain-footer {
+  background-image:
+    var(--grain-tile),
+    var(--grain-tile),
+    linear-gradient(to bottom, var(--color-noir), color-mix(in srgb, var(--color-noir) 35%, black) 100%);
+  background-size: 200px 200px, 200px 200px, 100% 100%;
+  background-position: 0 0, 103px 57px, 0 0;
+}
+
 /* Prose on text pages (terms, FAQ …). Kept minimal: links, emphasis, lists. */
 .prose-noir a {
   color: var(--color-cream);
