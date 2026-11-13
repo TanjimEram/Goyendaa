@@ -1,0 +1,154 @@
+/* ============================================================
+   HERO FX (mockup) — grain, venetian blinds, floating evidence.
+   Everything here animates transform/opacity only, and is driven
+   by data attributes on the hero <section>:
+     data-fx="off|subtle|medium"   intensity (server default: subtle)
+     data-fx-grain / -blinds / -parallax = "off" hides that effect
+     data-fx-still     reduced motion (OS setting or simulated)
+     data-fx-paused    tab hidden or hero off screen
+   The section renders and reads fine with none of this loaded.
+   ============================================================ */
+
+.hero-fx {
+  --fx-grain-o: 0.05;
+  --fx-blinds-o: 0.55;
+  --fx-items-o: 0.42;
+  --fx-float: 3px;
+}
+.hero-fx[data-fx="medium"] {
+  --fx-grain-o: 0.085;
+  --fx-blinds-o: 1;
+  --fx-items-o: 0.68;
+  --fx-float: 6px;
+}
+
+.fx-layer {
+  position: absolute;
+  pointer-events: none;
+}
+.hero-fx[data-fx="off"] .fx-layer,
+.hero-fx[data-fx-grain="off"] .fx-grain,
+.hero-fx[data-fx-blinds="off"] .fx-blinds,
+.hero-fx[data-fx-parallax="off"] .fx-evidence {
+  display: none;
+}
+
+.hero-fx[data-fx-paused] .fx-anim {
+  animation-play-state: paused;
+}
+.hero-fx[data-fx-still] .fx-anim {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-anim {
+    animation: none;
+  }
+}
+
+/* ── 1. Film grain ─────────────────────────────────────────────
+   One 200px feTurbulence tile (the same one the site-wide overlay
+   uses, so it's already cached), on an oversized layer that jumps
+   between 8 offsets a second. Jumping the layer's transform keeps
+   it on the compositor: the tile is rasterised once, never repainted. */
+.fx-grain {
+  inset: -96px;
+  opacity: var(--fx-grain-o);
+  mix-blend-mode: overlay;
+  background-size: 200px 200px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  will-change: transform;
+  animation: fx-grain 1s steps(1, end) infinite;
+}
+@keyframes fx-grain {
+  0% { transform: translate3d(0, 0, 0); }
+  12.5% { transform: translate3d(-37px, 21px, 0); }
+  25% { transform: translate3d(52px, -44px, 0); }
+  37.5% { transform: translate3d(-12px, 63px, 0); }
+  50% { transform: translate3d(71px, 9px, 0); }
+  62.5% { transform: translate3d(-66px, -28px, 0); }
+  75% { transform: translate3d(24px, 47px, 0); }
+  87.5% { transform: translate3d(-48px, -61px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* ── 2. Venetian-blind shadows ─────────────────────────────────
+   Tilted shadow bands with a hairline of brass light on the lit edge.
+   The layer sits UNDER the hero's left-to-right scrim, so it is
+   strongest on the right (the "window") and nearly gone behind the
+   copy. It drifts exactly one band period per cycle, so the loop is
+   seamless; only its transform animates. */
+.fx-blinds {
+  inset: -35% -25%;
+  transform: rotate(-11deg);
+}
+.fx-blinds-bands {
+  position: absolute;
+  inset: 0 0 -132px 0;
+  opacity: var(--fx-blinds-o);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgb(0 0 0 / 0.5) 0 54px,
+    rgb(0 0 0 / 0) 70px 117px,
+    color-mix(in srgb, var(--color-brass) 16%, transparent) 120px 122px,
+    rgb(0 0 0 / 0) 125px,
+    rgb(0 0 0 / 0.5) 132px
+  );
+  will-change: transform;
+  animation: fx-drift 50s linear infinite;
+}
+@keyframes fx-drift {
+  to { transform: translate3d(0, -132px, 0); }
+}
+
+/* ── 3. Floating evidence ──────────────────────────────────────
+   Outer .fx-item: placed by CSS, moved by the parallax loop (inline
+   transform). Inner .fx-float: the idle bob. Two elements, so the two
+   transforms never fight. Below 1280px only two small items show, in
+   the empty band above the eyebrow line. */
+.fx-evidence {
+  inset: 0;
+}
+.fx-item {
+  position: absolute;
+  opacity: calc(var(--fx-items-o) * var(--o, 1));
+}
+.fx-item svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.fx-float {
+  animation: fx-float var(--d, 9s) ease-in-out var(--delay, 0s) infinite alternate;
+}
+@keyframes fx-float {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to { transform: translate3d(0, calc(var(--fx-float) * -1), 0) rotate(0.6deg); }
+}
+
+.fx-i-glass,
+.fx-i-note,
+.fx-i-sus {
+  display: none;
+}
+.fx-i-print { top: 12px; right: 18px; width: 50px; }
+.fx-i-hat { top: 10px; right: 84px; width: 52px; }
+
+@media (min-width: 640px) {
+  .fx-i-print { top: 18px; right: 6%; width: 60px; }
+  .fx-i-hat { top: 14px; right: calc(6% + 80px); width: 60px; }
+}
+
+/* Desktop rail: everything right of 50% + 400px clears the widest
+   headline line (its right edge is at most 50% + 352px). */
+@media (min-width: 1280px) {
+  .fx-i-glass,
+  .fx-i-note,
+  .fx-i-sus {
+    display: block;
+  }
+  .fx-i-hat { top: 30px; right: auto; left: calc(50% + 140px); width: 64px; }
+  .fx-i-print { top: 19%; right: auto; left: calc(50% + 440px); width: 92px; }
+  .fx-i-glass { top: 40%; left: calc(50% + 405px); width: 150px; }
+  .fx-i-note { top: 63%; left: calc(50% + 470px); width: 165px; }
+  .fx-i-sus { bottom: 8%; left: calc(50% + 170px); width: 92px; }
+}
