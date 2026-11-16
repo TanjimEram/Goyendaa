@@ -68,7 +68,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 
 ## Site flow
 
-1. **Homepage** — hero (video-capable), featured cases, brand story. ✅ **built**
+1. **Homepage** — hero over a background loop (a noir flip-book of case panels, `HeroVideo`, dark overlay 80 % on phones / 60 % from `md`, measured AA over every frame), featured cases, brand story. ✅ **built**
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
 4. **Checkout** — `/checkout/[slug]` ✅ **built**: manual bKash **Send Money** to a personal number, with the reserved order code as the reference and the TrxID typed back into a form. No payment provider is involved. See "Checkout behaviour" below.
@@ -180,6 +180,12 @@ src/app/{faq,contact}/          help pages (FAQ is a no-JS <details> accordion)
 src/components/TextPage.tsx     frame + <Section> for prose pages
 src/components/MobileNav.tsx    hamburger panel below md (client island)
 src/components/LowEndFlag.tsx   sets html[data-lite] on low-end phones (textures)
+src/components/HeroVideo.tsx    hero background loop (client; skips reduced motion,
+                                Save-Data, low-end; pauses off screen)
+src/lib/low-end.ts              isLowEndDevice(): Save-Data / ≤4 cores / ≤2 GB
+public/hero/                    hero loop 1920×1080 (2.7 MB) + 720×1280 (1.8 MB)
+                                and their first-frame posters; built by
+                                ../Goyenda-Studio/Reels/hero-intro/build_web.sh
 src/lib/site.ts                 SITE: url (metadataBase), contact email /
                                 phone / hours, legal date, operator,
                                 download + confirmation windows
@@ -321,7 +327,6 @@ Known placeholders, to be replaced:
 - **Every card's generated preview is headed "Case brief"** now that `exhibit` isn't a stored field. Irrelevant once thumbnails exist.
 - **Seeded cases have no per-case contents/buying copy yet**, so they show the rank templates and default wording. Fill them in from `/admin`.
 - **No case PDFs are uploaded yet.** Until a case has `case_pdf_path`, Approve refuses; until it has `solution_pdf_path`, the solution job fails and alerts the admin. Upload both together.
-- **Hero video slot is empty.** Drop a file into `public/` and set `HERO_VIDEO_SRC` in `src/components/Hero.tsx`; the poster SVG covers it until then.
 - **JSX does not decode every HTML entity.** `&nearr;` rendered literally as text; common ones (`&mdash;`, `&rsquo;`, `&rarr;`, `&middot;`) are fine. Use the character itself (↗) for anything unusual.
 - **Legal pages are drafts.** Plain-language terms/privacy/refunds written for a sole-trader digital-goods seller in BD. Not legal advice — have them read before launch. `SITE.legalUpdated` must move when wording changes. Privacy §2 still names provider categories generically; it can now say bKash (manual) and Resend by name.
 - **The 7-day download window** (`SITE.downloadWindowDays`) is enforced by `/orders/[token]/download` (410 once past it) and stated on terms, FAQ and in the approval email. The *solution* link deliberately has no window.

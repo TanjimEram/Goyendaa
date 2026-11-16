@@ -1,16 +1,15 @@
 /**
- * Hero with a background-video slot.
- *
- * To switch the hero to video: drop an .mp4/.webm into /public and set
- * HERO_VIDEO_SRC below. Until then the poster SVG carries the section, so
- * nothing else needs to change. The video is decorative — muted, looping,
- * and never the sole carrier of information.
+ * Hero over a background loop: a noir flip-book of case panels (HeroVideo),
+ * built in Goyenda-Studio/Reels/hero-intro (build_web.sh → public/hero/).
+ * The loop is decoration only. The poster (its first frame) paints first and
+ * stays for reduced motion, Save-Data and low-end phones; a dark overlay and
+ * the scrim keep the copy on top.
  */
 import Link from "next/link";
+import { HeroVideo } from "@/components/HeroVideo";
 import { formatTaka, type CaseFile } from "@/lib/cases";
 
-const HERO_VIDEO_SRC: string = "";
-const HERO_POSTER = "/hero-poster.svg";
+const HERO_POSTER = { wide: "/hero/hero-poster-1920x1080.jpg", tall: "/hero/hero-poster-720x1280.jpg" };
 
 /** Stat strip, derived from the live catalogue so it can't go stale. */
 function statsFor(cases: CaseFile[]) {
@@ -41,25 +40,20 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
       className="vignette relative isolate flex min-h-[88svh] items-center overflow-hidden border-b border-noir-line"
     >
       {/* ── Backdrop layers ─────────────────────────────────── */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-20 bg-cover bg-center"
-        style={{ backgroundImage: `url('${HERO_POSTER}')` }}
-      />
-
-      {HERO_VIDEO_SRC && (
-        <video
-          aria-hidden
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster={HERO_POSTER}
+      <picture>
+        <source media="(max-width: 767px)" srcSet={HERO_POSTER.tall} />
+        <img
+          src={HERO_POSTER.wide}
+          alt=""
+          fetchPriority="high"
           className="absolute inset-0 -z-20 h-full w-full object-cover"
-        >
-          <source src={HERO_VIDEO_SRC} />
-        </video>
-      )}
+        />
+      </picture>
+      <HeroVideo />
+      {/* Dark overlay: the loop is a background, never brighter than the copy.
+          Heavier on phones, where the paragraph spans the full width and the
+          left-to-right scrim can't shield it (measured: AA over every frame). */}
+      <div aria-hidden className="absolute inset-0 -z-20 bg-noir/80 md:bg-noir/60" />
 
       {/* Scrim — keeps the headline legible whatever plays behind it. */}
       <div
