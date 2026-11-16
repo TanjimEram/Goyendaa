@@ -50,15 +50,15 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
         />
       </picture>
       <HeroVideo />
-      {/* Dark overlay: the loop is a background, never brighter than the copy.
-          Heavier on phones, where the paragraph spans the full width and the
-          left-to-right scrim can't shield it (measured: AA over every frame). */}
-      <div aria-hidden className="absolute inset-0 -z-20 bg-noir/80 md:bg-noir/60" />
-
-      {/* Scrim — keeps the headline legible whatever plays behind it. */}
+      {/* Darkening, shaped so the loop stays visible but never outshines the
+          copy. Phones: the copy spans the width, so an even overlay. md+: dark
+          behind the copy column, opening up toward the right. The copy also
+          carries a soft dark halo (below). Re-measure contrast over the video
+          frames if any of these change. */}
+      <div aria-hidden className="absolute inset-0 -z-10 bg-noir/78 md:hidden" />
       <div
         aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-r from-noir via-noir/90 to-noir/40"
+        className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-noir/92 from-0% via-noir/85 via-50% to-noir/0 to-95% md:block"
       />
       <div
         aria-hidden
@@ -71,7 +71,7 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
       <div aria-hidden className="grain absolute inset-0" />
 
       {/* ── Content ─────────────────────────────────────────── */}
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-5 py-24 sm:px-8 sm:py-28">
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-5 py-24 [text-shadow:0_0_28px_rgb(0_0_0/0.95),0_0_14px_rgb(0_0_0/0.95),0_0_5px_rgb(0_0_0/0.9)] sm:px-8 sm:py-28">
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.22em] text-brass">
           <span className="inline-block h-1.5 w-1.5 bg-blood" aria-hidden />
           Digital case files
@@ -87,7 +87,7 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
           <span className="text-brass">The answer isn&rsquo;t.</span>
         </h1>
 
-        <p className="mt-7 max-w-xl text-base leading-[1.7] text-ash sm:text-lg">
+        <p className="mt-7 max-w-xl text-base leading-[1.7] text-cream/85 sm:text-lg">
           Print a real case file &mdash; witness statements, interrogation
           transcripts, forensic notes, crime-scene photographs. Spread it across
           a table and work it like an investigator would. The solution is
@@ -125,7 +125,7 @@ export function Hero({ cases }: { cases: CaseFile[] }) {
                 <span className="block font-display text-2xl text-cream sm:text-3xl">
                   {stat.value}
                 </span>
-                <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-ash">
+                <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-cream/75">
                   {stat.label}
                 </span>
               </dd>

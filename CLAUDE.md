@@ -68,7 +68,7 @@ The project moved off Vercel on 2026-09-11. **Vercel's Hobby (free) tier prohibi
 
 ## Site flow
 
-1. **Homepage** — hero over a background loop (a noir flip-book of case panels, `HeroVideo`, dark overlay 80 % on phones / 60 % from `md`, measured AA over every frame), featured cases, brand story. ✅ **built**
+1. **Homepage** — hero over a background loop (a noir flip-book of case panels, `HeroVideo`), featured cases, brand story. ✅ **built** The loop is printed bright; legibility comes from shaped darkening (phones: even `bg-noir/78`; `md`+: a left-to-right shade, dark behind the copy, open on the right), a soft dark `text-shadow` halo on the copy, and cream (not `text-ash`) for the hero's small text. All hero text measured AA in a ring around the glyphs over 41 sampled frames (2026-11-16); re-measure if any of these change.
 2. **Case catalog** — evidence-board grid, filterable by difficulty rank. ✅ **built** (`/cases`)
 3. **Case detail** — premise teaser (no spoilers), difficulty badge, price, redacted document previews, buy CTA. ✅ **built** (`/cases/[slug]`)
 4. **Checkout** — `/checkout/[slug]` ✅ **built**: manual bKash **Send Money** to a personal number, with the reserved order code as the reference and the TrxID typed back into a form. No payment provider is involved. See "Checkout behaviour" below.
